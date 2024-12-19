@@ -145,7 +145,37 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     itemCount: notificationSnapshot.data!.length,
                     itemBuilder: (context, index) {
                       return ListTile(
-                        title: Text(notificationSnapshot.data![index]),
+                        leading: Icon(
+                          Icons.notifications,
+                          color: Color(0xffFBC700),
+                          size: 30.0,
+                        ),
+                        title: Text(
+                          notificationSnapshot.data![index],
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Notification received',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios,
+                          color: Color(0xffFBC700),
+                          size: 20.0,
+                        ),
+                        tileColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          side: BorderSide(color: Color(0xffFBC700), width: 1),
+                        ),
                       );
                     },
                   );

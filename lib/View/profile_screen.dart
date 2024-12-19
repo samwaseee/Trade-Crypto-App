@@ -64,9 +64,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    double myHeight = MediaQuery.of(context).size.height;
+    double myWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile'),
+        centerTitle: true,
+        backgroundColor: Color(0xffFBC700),
         actions: [
           IconButton(
             icon: Icon(isEditing ? Icons.check : Icons.edit),
@@ -85,37 +90,210 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: userData == null
           ? Center(child: CircularProgressIndicator())
-          : Padding(
+          : Container(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Email: ${userData!['email']}', style: TextStyle(fontSize: 18)),
+            Icon(Icons.person, size: 200, color: Color(0xffFBC700)),
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(16.0),
+                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xffFBC700).withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 7,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.email,
+                      color: Color(0xffFBC700),
+                      size: 30.0,
+                    ),
+                    SizedBox(width: 10.0),
+                    Expanded(
+                      child: Text(
+                        '${userData?['email']}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             SizedBox(height: 8),
             isEditing
                 ? TextField(
               controller: nameController,
-              decoration: InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(
+                labelText: 'Name',
+                labelStyle: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                ),
+                hintText: 'Enter your name',
+                hintStyle: TextStyle(color: Colors.grey),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Color(0xffFBC700),
+                    width: 2.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Color(0xffFBC700),
+                    width: 2.0,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white70,
+                prefixIcon: Icon(Icons.person, color: Color(0xffFBC700)),
+              ),
+              style: TextStyle(fontSize: 18, color: Colors.black),
             )
-                : Text('Name: ${userData!['name']}', style: TextStyle(fontSize: 18)),
+                : Center(
+              child: Container(
+                padding: EdgeInsets.all(16.0),
+                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xffFBC700).withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 7,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.perm_identity_sharp,
+                      color: Color(0xffFBC700),
+                      size: 30.0,
+                    ),
+                    SizedBox(width: 10.0),
+                    Expanded(
+                      child: Text(
+                        '${userData?['name']}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             SizedBox(height: 8),
             isEditing
                 ? TextField(
               controller: phoneController,
-              decoration: InputDecoration(labelText: 'Phone Number'),
+              decoration: InputDecoration(
+                labelText: 'Phone Number',
+                labelStyle: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                ),
+                hintText: 'Enter your phone number',
+                hintStyle: TextStyle(color: Colors.grey),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Color(0xffFBC700),
+                    width: 2.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Color(0xffFBC700),
+                    width: 2.0,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white70,
+                prefixIcon: Icon(Icons.phone, color: Color(0xffFBC700)),
+              ),
               keyboardType: TextInputType.phone,
+              style: TextStyle(fontSize: 18, color: Colors.black),
             )
-                : Text('Phone: ${userData!['phone']}', style: TextStyle(fontSize: 18)),
+                : Center(
+              child: Container(
+                padding: EdgeInsets.all(16.0),
+                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xffFBC700).withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 7,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.phone,
+                      color: Color(0xffFBC700),
+                      size: 30.0,
+                    ),
+                    SizedBox(width: 10.0),
+                    Expanded(
+                      child: Text(
+                        '${userData?['phone']}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Expanded(child: Container()),
-            if(!isEditing)
-            ElevatedButton(onPressed: logout,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red,
+            if (!isEditing)
+              ElevatedButton(
+                onPressed: logout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
                   minimumSize: Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-              child: Text('Log Out', style: TextStyle(color: Colors.white)),),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Text('Log Out', style: TextStyle(color: Colors.white)),
+              ),
           ],
         ),
       ),
     );
   }
 }
+
+
+
+
+

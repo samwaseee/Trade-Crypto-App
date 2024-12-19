@@ -99,7 +99,7 @@ class _HomeState extends State<Home> {
     double myWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xfffde155),
+        backgroundColor: Color(0xfffde164),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -261,11 +261,8 @@ class _HomeState extends State<Home> {
                         ],
                       ),
                     ),
-                    SizedBox(
-                      height: myHeight * 0.02,
-                    ),
                     Container(
-                      height: myHeight * 0.33,
+                      height: myHeight * 0.37,
                       child: isRefreshing == true
                           ? const Center(
                               child: CircularProgressIndicator(

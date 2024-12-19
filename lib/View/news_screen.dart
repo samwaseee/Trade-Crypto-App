@@ -39,23 +39,49 @@ class _NewsScreenState extends State<NewsScreen> {
                   final article = snapshot.data!.articles[index];
                   return ListTile(
                     leading: article.imageUrl != null
-                        ? SizedBox(
-                            width: 100, // Set the width
-                            height: 80, // Set the height
-                            child: Image.network(
-                              article.imageUrl!,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image),
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : const Icon(Icons.image, size: 100),
-                    // Default icon if imageUrl is null
-
-                    title: Text(article.title ?? 'No Title'),
-                    // Default text if title is null
-                    onTap: () => _launchURL(article.link ??
-                        ''), // Provide an empty string if link is null
+                        ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0), // Rounded corners for the image
+                      child: SizedBox(
+                        width: 100, // Set the width
+                        height: 80, // Set the height
+                        child: Image.network(
+                          article.imageUrl!,
+                          errorBuilder: (context, error, stackTrace) => const Icon(
+                            Icons.broken_image,
+                            color: Colors.red,
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                        : const Icon(Icons.image, size: 100, color: Colors.grey),
+                    title: Text(
+                      article.title ?? 'No Title',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Click to read more...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xffFBC700),
+                      size: 20.0,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    tileColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      side: BorderSide(color: Color(0xffFBC700), width: 1),
+                    ),
+                    onTap: () => _launchURL(article.link ?? ''),
                   );
                 },
               );
