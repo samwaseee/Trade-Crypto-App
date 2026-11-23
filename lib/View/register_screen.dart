@@ -43,7 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         // Display success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registered successfully!')),
+          const SnackBar(content: Text('Registered successfully!')),
         );
 
         // Navigate back to the login screen
@@ -69,159 +69,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      appBar: AppBar(title: Text('Register New Portfolio'), centerTitle: true ,
-      backgroundColor: Color(0xffFBC700),),
-      body: Container(
-        padding: EdgeInsets.all(16.0),
-        color: Colors.white, // Light yellowish background color
+      appBar: AppBar(
+        title: const Text('Register New Portfolio'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: nameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Name',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
                 hintText: 'Enter your name',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.person, color: Color(0xffFBC700)),
+                prefixIcon: Icon(Icons.person_outline),
               ),
-              style: TextStyle(fontSize: 18, color: Colors.black),
             ),
-            SizedBox(height: myHeight * 0.02),
+            const SizedBox(height: 16),
             TextField(
               controller: phoneController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Phone Number',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
                 hintText: 'Enter your phone number',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.phone, color: Color(0xffFBC700)),
+                prefixIcon: Icon(Icons.phone_outlined),
               ),
               keyboardType: TextInputType.phone,
-              style: TextStyle(fontSize: 18, color: Colors.black),
             ),
-            SizedBox(height: myHeight * 0.02),
+            const SizedBox(height: 16),
             TextField(
               controller: emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Email',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
                 hintText: 'Enter your email',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.email, color: Color(0xffFBC700)),
+                prefixIcon: Icon(Icons.email_outlined),
               ),
-              style: TextStyle(fontSize: 18, color: Colors.black),
+              keyboardType: TextInputType.emailAddress,
             ),
-            SizedBox(height: myHeight * 0.02),
+            const SizedBox(height: 16),
             TextField(
               controller: passwordController,
               decoration: InputDecoration(
                 labelText: 'Password',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
                 hintText: 'Enter your password',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.lock, color: Color(0xffFBC700)),
+                prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   onPressed: togglePasswordVisibility,
                   icon: Icon(
-                    isObscure ? Icons.visibility_outlined : Icons.visibility_off_rounded,
-                    color: Color(0xffFBC700),
+                    isObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   ),
                 ),
               ),
               obscureText: isObscure,
-              style: TextStyle(fontSize: 18, color: Colors.black),
             ),
-            Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: register,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xffFBC700),
-                  foregroundColor: Colors.black,
-                ),
-                child: Text('Register'),
-              ),
+            const SizedBox(height: 32),
+            FilledButton(
+              onPressed: register,
+              child: const Text('Register', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
@@ -229,6 +133,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-
-
-

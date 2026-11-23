@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:my_crypto/View/splash_screen.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:material_ui/material_ui.dart';
 
 
@@ -19,6 +20,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      themeMode: ThemeMode.light,
       home: SplashScreen(),
     );
   }

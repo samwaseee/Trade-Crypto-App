@@ -26,7 +26,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     try {
       if (emailController.text.isEmpty || passwordController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please fill in all fields')),
+          const SnackBar(content: Text('Please fill in all fields')),
         );
         return;
       }
@@ -39,7 +39,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       if (!mounted) return;
 
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => NavBar()));
+          context, MaterialPageRoute(builder: (context) => const NavBar()));
 
       Future.delayed(Duration.zero, () {
         if (!mounted) return;
@@ -47,13 +47,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('Login successfully!'),
+              title: const Text('Login successfully!'),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close the dialog
                   },
-                  child: Text('OK'),
+                  child: const Text('OK'),
                 ),
               ],
             );
@@ -70,158 +70,84 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Colors.white,
         body: SingleChildScrollView(
-          child: SizedBox(
-            height: myHeight,
-            width: myWidth,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Image.asset('assets/image/1.gif', height: myHeight * 0.3),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'The Future',
-                        style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Learn more about cryptocurrency, ',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.grey),
-                      ),
-                      Text(
-                        'look to the future in Trade Crypto',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.grey),
-                      ),
-                    ],
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 220,
+                child: Image.asset('assets/image/1.gif'),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'The Future',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Learn more about cryptocurrency,\nlook to the future in Trade Crypto',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  hintText: 'Email',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    onPressed: togglePasswordVisibility,
+                    icon: Icon(isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: emailController,
-                    decoration: InputDecoration(
-                        hintText: 'email',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(50))),
+                obscureText: isObscured,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: login,
+                icon: const Icon(Icons.login),
+                label: const Text('LOG IN', style: TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('or', style: TextStyle(color: Colors.grey)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                },
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: const Text('CREATE Portfolio', style: TextStyle(fontSize: 16)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
-                    controller: passwordController,
-                    decoration: InputDecoration(
-                        hintText: 'password',
-                        prefixIcon: Icon(Icons.lock),
-                        suffixIcon: IconButton(onPressed: togglePasswordVisibility,
-                            icon: Icon(isObscured? Icons.visibility : Icons.visibility_off)),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(50))),
-                    obscureText: isObscured,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: myWidth * 0.25),
-                  child: GestureDetector(
-                    onTap: login,
-                    child: Container(
-                      decoration: BoxDecoration(
-                          color: Color(0xffFBC700),
-                          borderRadius: BorderRadius.circular(50)),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: myWidth * 0.05,
-                            vertical: myHeight * 0.013),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'LOG IN  ',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                            RotationTransition(
-                                turns: AlwaysStoppedAnimation(360 / 360),
-                                child: Icon(Icons.login))
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: myWidth * 0.05),
-                      child: Container(
-                        height: 1,
-                        width: myWidth * 0.3,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const Text("or"),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: myWidth * 0.05),
-                      child: Container(
-                        height: 1,
-                        width: myWidth * 0.3,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: myWidth * 0.14),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => RegisterScreen()));
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                          color: Color(0xffFBC700),
-                          borderRadius: BorderRadius.circular(50)),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: myWidth * 0.05,
-                            vertical: myHeight * 0.013),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'CREATE Portfolio  ',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                            RotationTransition(
-                                turns: AlwaysStoppedAnimation(310 / 360),
-                                child: Icon(Icons.arrow_forward_rounded))
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
