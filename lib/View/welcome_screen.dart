@@ -1,6 +1,6 @@
 import 'package:my_crypto/View/register_screen.dart';
 import 'package:my_crypto/View/navBar.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -31,15 +31,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         return;
       }
 
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      if (!mounted) return;
 
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => NavBar()));
 
       Future.delayed(Duration.zero, () {
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -58,6 +61,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         );
       });
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: ${e.message}')),
       );
@@ -72,7 +76,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SingleChildScrollView(
-          child: Container(
+          child: SizedBox(
             height: myHeight,
             width: myWidth,
             child: Column(

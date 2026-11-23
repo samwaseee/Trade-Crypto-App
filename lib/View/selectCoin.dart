@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,9 +11,9 @@ import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
 
 class SelectCoin extends StatefulWidget {
-  var selectItem;
+  final dynamic selectItem;
 
-  SelectCoin({this.selectItem});
+  const SelectCoin({super.key, this.selectItem});
 
   @override
   State<SelectCoin> createState() => _SelectCoinState();
@@ -54,7 +54,7 @@ class _SelectCoinState extends State<SelectCoin> {
       }
       // Handle user data here
     } catch (e) {
-      print('Error fetching user data: $e');
+      debugPrint('Error fetching user data');
     }
   }
 
@@ -71,10 +71,7 @@ class _SelectCoinState extends State<SelectCoin> {
         'price': price,              // Price at which the coin was bought
         'date': DateTime.now().toIso8601String(), // Transaction date
       });
-
-      print('Buy transaction recorded successfully.');
     } catch (e) {
-      print('Error in buyCoin: $e');
       throw Exception('Failed to record buy transaction.');
     }
   }
@@ -92,10 +89,7 @@ class _SelectCoinState extends State<SelectCoin> {
         'price': price,              // Price at which the coin was sold
         'date': DateTime.now().toIso8601String(), // Transaction date
       });
-
-      print('Sell transaction recorded successfully.');
     } catch (e) {
-      print('Error in sellCoin: $e');
       throw Exception('Failed to record sell transaction.');
     }
   }
@@ -127,7 +121,7 @@ class _SelectCoinState extends State<SelectCoin> {
     double myWidth = MediaQuery.of(context).size.width;
     return SafeArea(
         child: Scaffold(
-      body: Container(
+      body: SizedBox(
         height: myHeight,
         width: myWidth,
         child: Column(
@@ -141,7 +135,7 @@ class _SelectCoinState extends State<SelectCoin> {
                 children: [
                   Row(
                     children: [
-                      Container(
+                      SizedBox(
                           height: myHeight * 0.08,
                           child: Image.network(widget.selectItem.image)),
                       SizedBox(
@@ -173,7 +167,7 @@ class _SelectCoinState extends State<SelectCoin> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '\$' + widget.selectItem.currentPrice.toString(),
+                        '\$${widget.selectItem.currentPrice}',
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.normal,
@@ -183,9 +177,7 @@ class _SelectCoinState extends State<SelectCoin> {
                         height: myHeight * 0.01,
                       ),
                       Text(
-                        widget.selectItem.marketCapChangePercentage24H
-                                .toString() +
-                            '%',
+                        '${widget.selectItem.marketCapChangePercentage24H}%',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.normal,
@@ -225,7 +217,7 @@ class _SelectCoinState extends State<SelectCoin> {
                             height: myHeight * 0.01,
                           ),
                           Text(
-                            '\$' + widget.selectItem.low24H.toString(),
+                            '\$${widget.selectItem.low24H}',
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.normal,
@@ -246,7 +238,7 @@ class _SelectCoinState extends State<SelectCoin> {
                             height: myHeight * 0.01,
                           ),
                           Text(
-                            '\$' + widget.selectItem.high24H.toString(),
+                            '\$${widget.selectItem.high24H}',
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.normal,
@@ -267,9 +259,7 @@ class _SelectCoinState extends State<SelectCoin> {
                             height: myHeight * 0.01,
                           ),
                           Text(
-                            '\$' +
-                                (widget.selectItem.totalVolume/1000).toString() +
-                                'B',
+                            '\$${widget.selectItem.totalVolume/1000}B',
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.normal,
@@ -283,7 +273,7 @@ class _SelectCoinState extends State<SelectCoin> {
                 SizedBox(
                   height: myHeight * 0.015,
                 ),
-                Container(
+                SizedBox(
                   height: myHeight * 0.4,
                   width: myWidth,
                   // color: Colors.amber,
@@ -333,7 +323,7 @@ class _SelectCoinState extends State<SelectCoin> {
                   height: myHeight * 0.01,
                 ),
                 Center(
-                  child: Container(
+                  child: SizedBox(
                     height: myHeight * 0.04,
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -366,7 +356,7 @@ class _SelectCoinState extends State<SelectCoin> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(5),
                                 color: textBool[index] == true
-                                    ? Color(0xffFBC700).withOpacity(0.3)
+                                    ? Color(0xffFBC700).withValues(alpha: 0.3)
                                     : Colors.transparent,
                               ),
                               child: Text(
@@ -430,7 +420,7 @@ class _SelectCoinState extends State<SelectCoin> {
                 ),
               ],
             )),
-            Container(
+            SizedBox(
               height: myHeight * 0.09,
               width: myWidth,
               // color: Colors.amber,
@@ -462,10 +452,12 @@ class _SelectCoinState extends State<SelectCoin> {
                                 _amount, // Use the amount selected
                                 widget.selectItem.currentPrice,
                               );
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Successfully bought $_amount ${widget.selectItem.id}')),
                               );
                             } catch (e) {
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Error: $e')),
                               );
@@ -499,7 +491,7 @@ class _SelectCoinState extends State<SelectCoin> {
                             onPressed: _decreaseAmount,
                             tooltip: 'Decrease amount',
                           ),
-                          Container(
+                          SizedBox(
                             width: myWidth * 0.2,
                             child: TextField(
                               readOnly: true,
@@ -547,10 +539,12 @@ class _SelectCoinState extends State<SelectCoin> {
                                 _amount, // Use the amount selected
                                 widget.selectItem.currentPrice,
                               );
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Successfully sold $_amount ${widget.selectItem.id}')),
                               );
                             } catch (e) {
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Error: $e')),
                               );
@@ -593,7 +587,7 @@ class _SelectCoinState extends State<SelectCoin> {
 
   int days = 30;
 
-  setDays(String txt) {
+  void setDays(String txt) {
     if (txt == 'D') {
       setState(() {
         days = 1;
@@ -626,10 +620,7 @@ class _SelectCoinState extends State<SelectCoin> {
   bool isRefresh = true;
 
   Future<void> getChart() async {
-    String url = 'https://api.coingecko.com/api/v3/coins/' +
-        widget.selectItem.id +
-        '/ohlc?vs_currency=usd&days=' +
-        days.toString();
+    String url = 'https://api.coingecko.com/api/v3/coins/${widget.selectItem.id}/ohlc?vs_currency=usd&days=$days';
 
     setState(() {
       isRefresh = true;
@@ -651,7 +642,7 @@ class _SelectCoinState extends State<SelectCoin> {
         itemChart = modelList;
       });
     } else {
-      print(response.statusCode);
+      debugPrint('Error getting chart: ${response.statusCode}');
     }
   }
 

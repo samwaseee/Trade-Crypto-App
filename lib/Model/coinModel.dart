@@ -1,7 +1,7 @@
 
 import 'dart:convert';
 
-List<CoinModel> coinModelFromJson(String str) => List<CoinModel>.from(json.decode(str).map((x) => CoinModel.fromJson(x)));
+List<CoinModel> coinModelFromJson(String str) => List<CoinModel>.from(json.decode(str).where((x) => x["current_price"] != null).map((x) => CoinModel.fromJson(x)));
 
 String coinModelToJson(List<CoinModel> data) => json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
@@ -65,21 +65,21 @@ class CoinModel {
     SparklineIn7D sparklineIn7D;
 
     factory CoinModel.fromJson(Map<String, dynamic> json) => CoinModel(
-        id: json["id"],
-        symbol: json["symbol"],
-        name: json["name"],
-        image: json["image"],
-        currentPrice: json["current_price"].toDouble(),
+        id: json["id"] ?? "",
+        symbol: json["symbol"] ?? "",
+        name: json["name"] ?? "",
+        image: json["image"] ?? "",
+        currentPrice: (json["current_price"] ?? 0).toDouble(),
         // marketCap: json["market_cap"],
-        marketCapRank: json["market_cap_rank"],
+        marketCapRank: json["market_cap_rank"] ?? 0,
         // fullyDilutedValuation: json["fully_diluted_valuation"],
-        totalVolume: json["total_volume"].toDouble(),
-        high24H: json["high_24h"].toDouble(),
-        low24H: json["low_24h"].toDouble(),
-        priceChange24H: json["price_change_24h"]?.toDouble(),
+        totalVolume: (json["total_volume"] ?? 0).toDouble(),
+        high24H: (json["high_24h"] ?? 0).toDouble(),
+        low24H: (json["low_24h"] ?? 0).toDouble(),
+        priceChange24H: (json["price_change_24h"] ?? 0).toDouble(),
         // priceChangePercentage24H: json["price_change_percentage_24h"]?.toDouble(),
         // marketCapChange24H: json["market_cap_change_24h"],
-        marketCapChangePercentage24H: json["market_cap_change_percentage_24h"]?.toDouble(),
+        marketCapChangePercentage24H: (json["market_cap_change_percentage_24h"] ?? 0).toDouble(),
         // circulatingSupply: json["circulating_supply"],
         // totalSupply: json["total_supply"],
         // maxSupply: json["max_supply"],
@@ -91,7 +91,7 @@ class CoinModel {
         // atlDate: DateTime.parse(json["atl_date"]),
         // roi: json["roi"],
         // lastUpdated: DateTime.parse(json["last_updated"]),
-        sparklineIn7D: SparklineIn7D.fromJson(json["sparkline_in_7d"]),
+        sparklineIn7D: SparklineIn7D.fromJson(json["sparkline_in_7d"] ?? {"price": []}),
     );
 
     Map<String, dynamic> toJson() => {
@@ -133,7 +133,7 @@ class SparklineIn7D {
     List<double> price;
 
     factory SparklineIn7D.fromJson(Map<String, dynamic> json) => SparklineIn7D(
-        price: List<double>.from(json["price"].map((x) => x?.toDouble())),
+        price: List<double>.from((json["price"] ?? []).map((x) => (x ?? 0).toDouble())),
     );
 
     Map<String, dynamic> toJson() => {

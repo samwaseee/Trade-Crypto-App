@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -48,13 +48,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final data = querySnapshot.docs.map((doc) {
         final transactionData = {
           'id': doc.id,
-          ...doc.data() as Map<String, dynamic>,
+          ...doc.data(),
         };
-        print('Fetched transaction: $transactionData');
         return transactionData;
       }).toList();
 
-      print('Total transactions fetched: ${data.length}');
       return data;
     });
   }
@@ -65,7 +63,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     for (var transaction in transactions) {
       String coinId = transaction['coinId'];
-      double amount = transaction['amount'];
 
       final coinData = coinMarket.firstWhere((coin) => coin.id == coinId,
           orElse: () => CoinModel(id: coinId, marketCapChangePercentage24H: 0));

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -26,10 +26,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> register() async {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
-      print('User registered with UID: ${userCredential.user?.uid}');
 
       // Save additional user data to Firestore
       try {
@@ -39,7 +38,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': emailController.text,
           'wallet': 10000,
         });
-        print('User data added to Firestore');
+
+        if (!mounted) return;
 
         // Display success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -49,16 +49,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Navigate back to the login screen
         Navigator.pop(context);
       } catch (e) {
-        print('Error adding user to Firestore: $e');
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save user data: ${e.toString()}')),
         );
       }
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: ${e.message}')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
@@ -68,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(title: Text('Register New Portfolio'), centerTitle: true ,
@@ -211,7 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: TextStyle(fontSize: 18, color: Colors.black),
             ),
             Spacer(),
-            Container(
+            SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: register,

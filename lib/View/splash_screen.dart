@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:my_crypto/View/welcome_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return SafeArea(
       child: Scaffold(
         backgroundColor: Color(0xffFBC700),
-        body: Container(
+        body: SizedBox(
           height: myHeight,
           width: myWidth,
           child: Padding(

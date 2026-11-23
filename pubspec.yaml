@@ -34,17 +34,18 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  http: ^0.13.3
+  cupertino_icons: ^2.0.0
+  http: ^1.6.0
   chart_sparkline: ^1.0.12
-  syncfusion_flutter_charts: ^20.4.48
-  firebase_core: ^3.8.0
-  firebase_auth: ^5.3.3
-  cloud_firestore: ^5.5.0
+  syncfusion_flutter_charts: ^35.2.12
+  firebase_core: ^5.2.0
+  firebase_auth: ^7.1.0
+  cloud_firestore: ^7.2.0
   url_launcher: ^6.0.13
-  intl: ^0.17.0
-  flutter_dotenv: ^5.0.3
+  intl: ^0.20.3
+  flutter_dotenv: ^6.0.2
 
+  material_ui: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,7 +55,8 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -71,6 +73,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/image/
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

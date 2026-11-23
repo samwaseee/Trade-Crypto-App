@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_crypto/View/welcome_screen.dart';
@@ -47,26 +47,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'phone': phoneController.text,
         'email': emailController.text,
       });
+      if (!mounted) return;
       setState(() {
         isEditing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully!')));
       fetchUserData();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update profile: ${e.toString()}')));
     }
   }
 
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> WelcomeScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile'),
@@ -105,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(10.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0xffFBC700).withOpacity(0.5),
+                      color: Color(0xffFBC700).withValues(alpha: 0.5),
                       spreadRadius: 2,
                       blurRadius: 7,
                       offset: Offset(0, 3),
@@ -175,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(10.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0xffFBC700).withOpacity(0.5),
+                      color: Color(0xffFBC700).withValues(alpha: 0.5),
                       spreadRadius: 2,
                       blurRadius: 7,
                       offset: Offset(0, 3),
@@ -246,7 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(10.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0xffFBC700).withOpacity(0.5),
+                      color: Color(0xffFBC700).withValues(alpha: 0.5),
                       spreadRadius: 2,
                       blurRadius: 7,
                       offset: Offset(0, 3),

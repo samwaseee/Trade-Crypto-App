@@ -1,9 +1,9 @@
 import 'package:my_crypto/View/selectCoin.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class Item2 extends StatelessWidget {
-  var item;
-  Item2({this.item});
+  final dynamic item;
+  const Item2({super.key, this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class Item2 extends StatelessWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Color(0xffFBC700).withOpacity(0.5),
+              color: Color(0xffFBC700).withValues(alpha: 0.5),
               spreadRadius: 1,
               blurRadius: 7,
               offset: Offset(4, 6), // changes position of shadow
@@ -43,7 +43,7 @@ class Item2 extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
+              SizedBox(
                   height: myHeight * 0.04, child: Image.network(item.image)),
               SizedBox(
                 height: myHeight * 0.02,
@@ -62,7 +62,7 @@ class Item2 extends StatelessWidget {
                     width: myWidth * 0.03,
                   ),
                   Text(
-                    item.marketCapChangePercentage24H.toStringAsFixed(2) + '%',
+                    '${item.marketCapChangePercentage24H.toStringAsFixed(2)}%',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.normal,
@@ -73,7 +73,7 @@ class Item2 extends StatelessWidget {
                 ],
               ),
               Text(
-                '\$ '+ item.currentPrice.toStringAsFixed(2),
+                '\$ ${item.currentPrice.toStringAsFixed(2)}',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.normal,

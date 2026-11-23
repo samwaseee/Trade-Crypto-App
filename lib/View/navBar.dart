@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/View/news_screen.dart';
 import 'package:my_crypto/View/notification_screen.dart';
 import 'package:my_crypto/View/profile_screen.dart';
@@ -25,7 +25,6 @@ class _NavBarState extends State<NavBar> {
   @override
   Widget build(BuildContext context) {
     double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.white,

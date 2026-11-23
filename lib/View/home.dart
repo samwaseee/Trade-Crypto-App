@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:my_crypto/Model/coinModel.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:http/http.dart' as http;
 
 class Home extends StatefulWidget {
@@ -42,8 +42,7 @@ class _HomeState extends State<Home> {
         .map((querySnapshot) => querySnapshot.docs.map((doc) {
               return {
                 'id': doc.id, // Include the document ID
-                ...doc.data()
-                    as Map<String, dynamic>, // Include the document data
+                ...doc.data(), // Include the document data
               };
             }).toList());
   }
@@ -84,11 +83,9 @@ class _HomeState extends State<Home> {
 
         // Delete the transaction document
         transaction.delete(transactionDoc);
-
-        print('Trade closed successfully. Wallet updated to $newWallet.');
       });
     } catch (e) {
-      print('Error in closeTrade: $e');
+      debugPrint('Error in closeTrade: $e');
       throw Exception('Failed to close trade: $e');
     }
   }
@@ -110,7 +107,7 @@ class _HomeState extends State<Home> {
                     horizontal: myWidth * 0.02, vertical: myHeight * 0.005),
                 decoration: BoxDecoration(
                   color: _selectedTabIndex == 0
-                      ? Colors.white.withOpacity(0.5)
+                      ? Colors.white.withValues(alpha: 0.5)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(5),
                 ),
@@ -130,7 +127,7 @@ class _HomeState extends State<Home> {
                     horizontal: myWidth * 0.02, vertical: myHeight * 0.005),
                 decoration: BoxDecoration(
                   color: _selectedTabIndex == 1
-                      ? Colors.white.withOpacity(0.5)
+                      ? Colors.white.withValues(alpha: 0.5)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(5),
                 ),
@@ -165,21 +162,22 @@ class _HomeState extends State<Home> {
   Widget _getBodyContent(int index, double myHeight, double myWidth) {
     switch (index) {
       case 0:
-        return Container(
-          width: myWidth,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.fromARGB(255, 253, 225, 112),
-                  Color(0xffFBC700),
-                ]),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        return SingleChildScrollView(
+          child: Container(
+            width: myWidth,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.fromARGB(255, 253, 225, 112),
+                    Color(0xffFBC700),
+                  ]),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
+              children: [
               StreamBuilder<DocumentSnapshot>(
                 stream: fetchWalletStream(userId),
                 builder: (context, snapshot) {
@@ -214,7 +212,7 @@ class _HomeState extends State<Home> {
                           width: MediaQuery.of(context).size.width * 0.1,
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.5)),
+                              color: Colors.white.withValues(alpha: 0.5)),
                           child: Image.asset(
                             'assets/icons/5.1.png',
                           ),
@@ -261,7 +259,7 @@ class _HomeState extends State<Home> {
                         ],
                       ),
                     ),
-                    Container(
+                    SizedBox(
                       height: myHeight * 0.37,
                       child: isRefreshing == true
                           ? const Center(
@@ -362,9 +360,9 @@ class _HomeState extends State<Home> {
                                                       transaction['type'] ==
                                                               'Buy'
                                                           ? Text(
-                                                              'Profit: \$${buyprofit}')
+                                                              'Profit: \$$buyprofit')
                                                           : Text(
-                                                              'Profit: \$${sellprofit}'),
+                                                              'Profit: \$$sellprofit'),
                                                       Text(
                                                           'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
                                                       Text(
@@ -423,6 +421,7 @@ class _HomeState extends State<Home> {
                                                                         'Buy'
                                                                     ? buyprofit
                                                                     : sellprofit);
+                                                            if (!context.mounted) return;
                                                             Navigator.pop(
                                                                 context); // Close the transaction dialog
                                                             ScaffoldMessenger
@@ -433,6 +432,7 @@ class _HomeState extends State<Home> {
                                                                       'Trade closed successfully!')),
                                                             );
                                                           } catch (e) {
+                                                            if (!context.mounted) return;
                                                             ScaffoldMessenger
                                                                     .of(context)
                                                                 .showSnackBar(
@@ -480,7 +480,8 @@ class _HomeState extends State<Home> {
                     SizedBox(
                       height: myHeight * 0.01,
                     ),
-                    Expanded(
+                    SizedBox(
+                      height: myHeight * 0.22,
                       child: Padding(
                         padding: EdgeInsets.only(left: myWidth * 0.03),
                         child: isRefreshing == true
@@ -489,7 +490,7 @@ class _HomeState extends State<Home> {
                                   color: Color(0xffFBC700),
                                 ),
                               )
-                            : coinMarket == null || coinMarket!.length == 0
+                            : coinMarket == null || coinMarket!.isEmpty
                                 ? Padding(
                                     padding: EdgeInsets.all(myHeight * 0.06),
                                     child: Center(
@@ -518,7 +519,7 @@ class _HomeState extends State<Home> {
               )
             ],
           ),
-        );
+        ));
       case 1:
         return Text('Top 10 coins content');
       case 2:
@@ -529,7 +530,7 @@ class _HomeState extends State<Home> {
   }
 
   List? coinMarket = [];
-  var coinMarketList;
+  List<CoinModel>? coinMarketList;
 
   Future<List<CoinModel>?> getCoinMarket() async {
     const url =
@@ -554,5 +555,6 @@ class _HomeState extends State<Home> {
     } else {
       throw Exception(response.statusCode);
     }
+    return null;
   }
 }
