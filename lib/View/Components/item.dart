@@ -7,175 +7,144 @@ class Item extends StatelessWidget {
 
   const Item({super.key, this.item, this.transaction});
 
-
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final buyprofit = double.parse((item.currentPrice - transaction['price']).toStringAsFixed(2));
     final sellprofit = double.parse((transaction['price'] - item.currentPrice).toStringAsFixed(2));
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-          horizontal: myWidth * 0.03, vertical: myHeight * 0.02),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: SizedBox(
-                height: myHeight * 0.05, child: Image.network(item.image)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      item.id,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(
-                      width: myWidth * 0.02,
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          transaction['amount'].toStringAsFixed(2),
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.grey),
-                        ),
-                        SizedBox(
-                          width: myWidth * 0.03,
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: myWidth * 0.009),
-                          decoration: BoxDecoration(
-                            color: transaction['type'] == 'Buy'
-                                ? buyprofit >= 0
-                                ? Colors.green
-                                : Colors.red
-                                : sellprofit >= 0
-                                ? Colors.green
-                                : Colors.red,
-                            borderRadius: BorderRadius.circular(2.0),
-                          ),
-                          child: Text(
-                            transaction['type'],
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.white
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      width: myWidth * 0.01,
-                    ),
-                    Text(
-                      'at  \$${transaction['price']}',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.blueGrey),
-                    ),
-                  ],
-                ),
-              ],
+    final isBuy = transaction['type'] == 'Buy';
+    final profit = isBuy ? buyprofit : sellprofit;
+    final isPositive = profit >= 0;
+    final profitColor = isPositive ? Colors.green : Colors.red;
+
+    final isChangePositive = item.marketCapChangePercentage24H >= 0;
+    final changeColor = isChangePositive ? Colors.green : Colors.red;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Image.network(
+                item.image,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.currency_bitcoin, size: 30),
+              ),
             ),
-          ),
-          SizedBox(
-            width: myWidth * 0.01,
-          ),
-          Expanded(
-            flex: 1,
-            child: SizedBox(
-              height: myHeight * 0.05,
-              child: Sparkline(
-                data: item.sparklineIn7D.price,
-                lineWidth: 2.0,
-                lineColor: transaction['type'] == 'Buy' ? buyprofit >= 0
-                    ? Colors.green
-                    : Colors.red : sellprofit >= 0
-                    ? Colors.green
-                    : Colors.red,
-                fillMode: FillMode.below,
-                fillGradient: LinearGradient(
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.id,
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '${transaction['amount'].toStringAsFixed(2)} @ \$${transaction['price']}',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          transaction['type'],
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 36,
+                child: Sparkline(
+                  data: item.sparklineIn7D.price,
+                  lineWidth: 2.0,
+                  lineColor: profitColor,
+                  fillMode: FillMode.below,
+                  fillGradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: const [0.0, 0.7],
-                    colors: transaction['type'] == 'Buy' ? buyprofit >= 0
-                        ? [Colors.green, Colors.green.withValues(alpha: 0.1)]
-                        : [Colors.red, Colors.red.withValues(alpha: 0.1)] : sellprofit >= 0
-                        ? [Colors.green, Colors.green.withValues(alpha: 0.1)]
-                        : [Colors.red, Colors.red.withValues(alpha: 0.1)])
+                    colors: [
+                      profitColor,
+                      profitColor.withValues(alpha: 0.1),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            width: myWidth * 0.04,
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                transaction['type'] == 'Buy' ? Text(
-                  '\$ $buyprofit',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: buyprofit >= 0
-                          ? Colors.green
-                          : Colors.red),
-                ) : Text(
-                  '\$ $sellprofit',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: sellprofit >= 0
-                          ? Colors.green
-                          : Colors.red),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      item.currentPrice.toString(),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: profitColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${isPositive ? '+' : ''}\$$profit',
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.grey),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: profitColor,
+                      ),
                     ),
-                    SizedBox(
-                      width: myWidth * 0.03,
-                    ),
-                    Text(
-                      item.marketCapChangePercentage24H.toStringAsFixed(2) +
-                          '%',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: item.marketCapChangePercentage24H >= 0
-                              ? Colors.green
-                              : Colors.red),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${item.currentPrice}',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: changeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${isChangePositive ? '+' : ''}${item.marketCapChangePercentage24H.toStringAsFixed(2)}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: changeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
