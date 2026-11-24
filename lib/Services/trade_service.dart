@@ -15,11 +15,14 @@ class TradeService {
     required double amount,
     required double price,
   }) async {
+    if (!price.isFinite || price <= 0) {
+      throw Exception('Invalid price.');
+    }
     if (type != 'Buy' && type != 'Sell') {
       throw Exception("Invalid trade type: '$type'. Expected 'Buy' or 'Sell'.");
     }
-    if (amount <= 0 || price <= 0) {
-      throw Exception('Amount and price must be greater than zero.');
+    if (amount <= 0) {
+      throw Exception('Amount must be greater than zero.');
     }
 
     final cost = roundTo(amount * price, 8);
@@ -64,6 +67,10 @@ class TradeService {
     required String transactionId,
     required double currentPrice,
   }) async {
+    if (!currentPrice.isFinite || currentPrice <= 0) {
+      throw Exception('Invalid price.');
+    }
+
     final userDocRef = _firestore.collection('users').doc(userId);
     final transactionDocRef = userDocRef.collection('transactions').doc(transactionId);
 

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../Model/article.dart';
 import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
+import '../Services/market_repository.dart';
 import '../Services/trade_service.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
@@ -31,6 +32,7 @@ class _SelectCoinState extends State<SelectCoin> {
 
   double _amount = 1.0;
   bool _amountInvalid = false;
+  bool _submitting = false;
   final TextEditingController _amountController = TextEditingController();
 
   @override
@@ -62,6 +64,7 @@ class _SelectCoinState extends State<SelectCoin> {
   }
 
   Future<void> openTrade(String type) async {
+    if (_submitting) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,24 +83,35 @@ class _SelectCoinState extends State<SelectCoin> {
     }
     _amount = roundTo(parsed, 8);
 
+    setState(() {
+      _submitting = true;
+    });
+
     final messenger = ScaffoldMessenger.of(context);
     try {
+      final freshPrice = await MarketRepository.instance.getFreshPrice(widget.selectItem.id);
       await TradeService().openTrade(
         userId: user.uid,
         coinId: widget.selectItem.id,
         type: type,
         amount: _amount,
-        price: (widget.selectItem.currentPrice as num).toDouble(),
+        price: freshPrice,
       );
       final positionType = type == 'Buy' ? 'long' : 'short';
       messenger.showSnackBar(
-        SnackBar(content: Text('Opened $positionType position for $_amount ${widget.selectItem.id}')),
+        SnackBar(content: Text('Opened $positionType position for $_amount ${widget.selectItem.id} at \$${formatUsd(freshPrice)}')),
       );
     } catch (e) {
       final message = e.toString().replaceFirst(RegExp(r'^(Exception|Invalid argument\(s\)):\s*'), '');
       messenger.showSnackBar(
         SnackBar(content: Text('Error: $message')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
     }
   }
 
@@ -439,7 +453,7 @@ class _SelectCoinState extends State<SelectCoin> {
                               backgroundColor: Colors.green,
                               minimumSize: const Size.fromHeight(48),
                             ),
-                            onPressed: _amountInvalid ? null : () => openTrade('Buy'),
+                            onPressed: (_amountInvalid || _submitting) ? null : () => openTrade('Buy'),
                             child: const Text('Buy'),
                           ),
                         ),
@@ -491,7 +505,7 @@ class _SelectCoinState extends State<SelectCoin> {
                               backgroundColor: Colors.red,
                               minimumSize: const Size.fromHeight(48),
                             ),
-                            onPressed: _amountInvalid ? null : () => openTrade('Sell'),
+                            onPressed: (_amountInvalid || _submitting) ? null : () => openTrade('Sell'),
                             child: const Text('Short'),
                           ),
                         ),

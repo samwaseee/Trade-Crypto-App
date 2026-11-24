@@ -452,19 +452,20 @@ class _HomeState extends State<Home> {
 
                                       if (confirm == true) {
                                         try {
+                                          final freshPrice = await MarketRepository.instance.getFreshPrice(coinData.id);
                                           await TradeService().closeTrade(
                                             userId: userId,
                                             transactionId: transaction['id'],
-                                            currentPrice: (coinData.currentPrice as num).toDouble(),
+                                            currentPrice: freshPrice,
                                           );
                                           if (!context.mounted) return;
                                           Navigator.pop(context);
                                           ScaffoldMessenger.of(
                                                   context)
                                               .showSnackBar(
-                                            const SnackBar(
+                                            SnackBar(
                                                 content: Text(
-                                                    'Trade closed successfully!')),
+                                                    'Trade closed at \$${formatUsd(freshPrice)}')),
                                           );
                                         } catch (e) {
                                           final message = e.toString().replaceFirst(RegExp(r'^(Exception|Invalid argument\(s\)):\s*'), '');
@@ -630,12 +631,92 @@ class _HomeState extends State<Home> {
         coinMarketList = coins;
         coinMarket = coins;
       });
+      if (mounted && userId.isNotEmpty && coinMarket != null && coinMarket!.isNotEmpty) {
+        _checkLiquidations();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         isRefreshing = false;
         coinMarket = [];
       });
+    }
+  }
+
+  bool _liquidating = false;
+
+  Future<void> _checkLiquidations() async {
+    if (_liquidating || userId.isEmpty || coinMarket == null || coinMarket!.isEmpty) {
+      return;
+    }
+    _liquidating = true;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('transactions')
+          .get();
+
+      final List<String> liquidatedCoins = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final type = data['type'];
+        final coinId = data['coinId'];
+        final cost = (data['cost'] as num?)?.toDouble();
+
+        if (type != 'Sell' || coinId == null || cost == null) continue;
+
+        final matchingCoins = coinMarket!.where((c) => c.id == coinId);
+        if (matchingCoins.isEmpty) continue;
+        final coinData = matchingCoins.first;
+
+        final entryPrice = (data['price'] as num?)?.toDouble() ?? 0.0;
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+        final currentPrice = (coinData.currentPrice as num).toDouble();
+
+        if (isLiquidated(
+          type: 'Sell',
+          entryPrice: entryPrice,
+          currentPrice: currentPrice,
+          amount: amount,
+          cost: cost,
+        )) {
+          double freshPrice;
+          try {
+            freshPrice = await MarketRepository.instance.getFreshPrice(coinId.toString());
+          } catch (_) {
+            continue;
+          }
+
+          if (isLiquidated(
+            type: 'Sell',
+            entryPrice: entryPrice,
+            currentPrice: freshPrice,
+            amount: amount,
+            cost: cost,
+          )) {
+            try {
+              await TradeService().closeTrade(
+                userId: userId,
+                transactionId: doc.id,
+                currentPrice: freshPrice,
+              );
+              liquidatedCoins.add(coinId.toString());
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (liquidatedCoins.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Short on ${liquidatedCoins.join(', ')} was liquidated')),
+        );
+      }
+    } catch (_) {
+      // Ignore errors
+    } finally {
+      _liquidating = false;
     }
   }
 }

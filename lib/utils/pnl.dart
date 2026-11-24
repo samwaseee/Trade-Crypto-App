@@ -27,3 +27,14 @@ double roundTo(double v, int decimals) {
   final mod = pow(10, decimals);
   return (v * mod).roundToDouble() / mod;
 }
+
+bool isLiquidated({
+  required String type,
+  required double entryPrice,
+  required double currentPrice,
+  required double amount,
+  required double cost,
+}) {
+  if (type != 'Sell') return false;
+  return cost + computePnl(type: type, entryPrice: entryPrice, currentPrice: currentPrice, amount: amount) <= 0;
+}
