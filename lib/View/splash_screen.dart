@@ -13,10 +13,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     Timer(
-      Duration(seconds: 4),
+      const Duration(seconds: 4),
       () {
+        if (!mounted) return;
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => WelcomeScreen()));
+            context, MaterialPageRoute(builder: (context) => const WelcomeScreen()));
       },
     );
     super.initState();
@@ -24,63 +25,59 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: Color(0xffFBC700),
-        body: SizedBox(
-          height: myHeight,
-          width: myWidth,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: myHeight * 0.05),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(''),
-                Text(
-                  'Trade Crypto',
-                  style: TextStyle(
-                      fontSize: 60,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold),
-                ),
-                Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Creat by',
-                          style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.black,
-                              fontWeight: FontWeight.normal),
-                        ),
-                        SizedBox(
-                          width: myWidth * 0.02,
-                        ),
-                        Image.asset(
-                          'assets/image/sam.png',
-                          height: myHeight * 0.05,
-                          color: Colors.black,
-                        )
-                      ],
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Scaffold(
+      backgroundColor: colorScheme.primaryContainer,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox.shrink(),
+              Column(
+                children: [
+                  Text(
+                    'Trade Crypto',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onPrimaryContainer,
                     ),
-                    SizedBox(
-                      height: myHeight * 0.005,
-                    ),
-                    Image.asset(
-                      'assets/image/loading1.gif',
-                      height: myHeight * 0.015,
-                      color: Colors.black,
-                    )
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Created by',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Image.asset(
+                        'assets/image/sam.png',
+                        height: 36,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Image.asset(
+                    'assets/image/loading1.gif',
+                    height: 16,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

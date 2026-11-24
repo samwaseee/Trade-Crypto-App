@@ -30,12 +30,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchUserData() async {
     DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+    if (!mounted) return;
     setState(() {
       userData = doc.data() as Map<String, dynamic>?;
       if (userData != null) {
-        nameController.text = userData!['name'];
-        phoneController.text = userData!['phone'];
-        emailController.text = userData!['email'];
+        nameController.text = userData!['name'] ?? '';
+        phoneController.text = userData!['phone'] ?? '';
+        emailController.text = userData!['email'] ?? '';
       }
     });
   }
@@ -51,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         isEditing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!')));
       fetchUserData();
     } catch (e) {
       if (!mounted) return;
@@ -62,16 +63,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> WelcomeScreen()));
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const WelcomeScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
-        centerTitle: true,
-        backgroundColor: Color(0xffFBC700),
+        title: const Text('Profile'),
         actions: [
           IconButton(
             icon: Icon(isEditing ? Icons.check : Icons.edit),
@@ -85,215 +87,153 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: userData == null
-          ? Center(child: CircularProgressIndicator())
-          : Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(Icons.person, size: 200, color: Color(0xffFBC700)),
-            Center(
-              child: Container(
-                padding: EdgeInsets.all(16.0),
-                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xffFBC700).withValues(alpha: 0.5),
-                      spreadRadius: 2,
-                      blurRadius: 7,
-                      offset: Offset(0, 3),
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
+                    child: Icon(
+                      Icons.person,
+                      size: 64,
+                      color: colorScheme.primary,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.email,
-                      color: Color(0xffFBC700),
-                      size: 30.0,
-                    ),
-                    SizedBox(width: 10.0),
-                    Expanded(
-                      child: Text(
-                        '${userData?['email']}',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.email_outlined, color: colorScheme.primary),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Email',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${userData?['email']}',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 8),
-            isEditing
-                ? TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
-                hintText: 'Enter your name',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
                   ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: isEditing
+                          ? TextField(
+                              controller: nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Name',
+                                prefixIcon: Icon(Icons.person_outline),
+                              ),
+                            )
+                          : Row(
+                              children: [
+                                Icon(Icons.perm_identity_sharp, color: colorScheme.primary),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Name',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${userData?['name']}',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.person, color: Color(0xffFBC700)),
-              ),
-              style: TextStyle(fontSize: 18, color: Colors.black),
-            )
-                : Center(
-              child: Container(
-                padding: EdgeInsets.all(16.0),
-                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xffFBC700).withValues(alpha: 0.5),
-                      spreadRadius: 2,
-                      blurRadius: 7,
-                      offset: Offset(0, 3),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: isEditing
+                          ? TextField(
+                              controller: phoneController,
+                              decoration: const InputDecoration(
+                                labelText: 'Phone Number',
+                                prefixIcon: Icon(Icons.phone_outlined),
+                              ),
+                              keyboardType: TextInputType.phone,
+                            )
+                          : Row(
+                              children: [
+                                Icon(Icons.phone_outlined, color: colorScheme.primary),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Phone Number',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${userData?['phone']}',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.perm_identity_sharp,
-                      color: Color(0xffFBC700),
-                      size: 30.0,
-                    ),
-                    SizedBox(width: 10.0),
-                    Expanded(
-                      child: Text(
-                        '${userData?['name']}',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  ),
+                  const SizedBox(height: 32),
+                  if (!isEditing)
+                    FilledButton.icon(
+                      onPressed: logout,
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Log Out'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
+                        minimumSize: const Size.fromHeight(52),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-            SizedBox(height: 8),
-            isEditing
-                ? TextField(
-              controller: phoneController,
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                labelStyle: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
-                hintText: 'Enter your phone number',
-                hintStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    color: Color(0xffFBC700),
-                    width: 2.0,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white70,
-                prefixIcon: Icon(Icons.phone, color: Color(0xffFBC700)),
-              ),
-              keyboardType: TextInputType.phone,
-              style: TextStyle(fontSize: 18, color: Colors.black),
-            )
-                : Center(
-              child: Container(
-                padding: EdgeInsets.all(16.0),
-                margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xffFBC700).withValues(alpha: 0.5),
-                      spreadRadius: 2,
-                      blurRadius: 7,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.phone,
-                      color: Color(0xffFBC700),
-                      size: 30.0,
-                    ),
-                    SizedBox(width: 10.0),
-                    Expanded(
-                      child: Text(
-                        '${userData?['phone']}',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(child: Container()),
-            if (!isEditing)
-              ElevatedButton(
-                onPressed: logout,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  minimumSize: Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: Text('Log Out', style: TextStyle(color: Colors.white)),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
-
-
-
-
-

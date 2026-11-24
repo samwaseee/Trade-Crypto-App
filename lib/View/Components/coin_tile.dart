@@ -50,7 +50,7 @@ class CoinTile extends StatelessWidget {
           padding: const EdgeInsets.all(12.0),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final showSparkline = constraints.maxWidth >= 380 && sparklinePrices.isNotEmpty;
+              final showSparkline = constraints.maxWidth >= 330 && sparklinePrices.isNotEmpty;
 
               return Row(
                 children: [

@@ -8,7 +8,7 @@ class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
 
   @override
-  _NewsScreenState createState() => _NewsScreenState();
+  State<NewsScreen> createState() => _NewsScreenState();
 }
 
 class _NewsScreenState extends State<NewsScreen> {
@@ -22,76 +22,110 @@ class _NewsScreenState extends State<NewsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow,
-        centerTitle: true,
-        title: Text('Latest News', style: TextStyle(color: Colors.black, fontSize: 24)),
+        title: const Text('Latest News'),
       ),
-      body: Center(
-        child: FutureBuilder<NewsResponse>(
-          future: futureNews,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return ListView.builder(
-                itemCount: snapshot.data!.articles.length,
-                itemBuilder: (context, index) {
-                  final article = snapshot.data!.articles[index];
-                  return ListTile(
-                    leading: article.imageUrl != null
-                        ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8.0), // Rounded corners for the image
-                      child: SizedBox(
-                        width: 100, // Set the width
-                        height: 80, // Set the height
-                        child: Image.network(
-                          article.imageUrl!,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.broken_image,
-                            color: Colors.red,
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )
-                        : const Icon(Icons.image, size: 100, color: Colors.grey),
-                    title: Text(
-                      article.title ?? 'No Title',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Click to read more...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios,
-                      color: Color(0xffFBC700),
-                      size: 20.0,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    tileColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      side: BorderSide(color: Color(0xffFBC700), width: 1),
-                    ),
-                    onTap: () => _launchURL(article.link ?? ''),
-                  );
-                },
-              );
-            } else if (snapshot.hasError) {
-              return Text("${snapshot.error}");
-            }
+      body: FutureBuilder<NewsResponse>(
+        future: futureNews,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text('Error: ${snapshot.error}'),
+              ),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.articles.isEmpty) {
+            return const Center(child: Text('No news articles found.'));
+          }
 
-            return CircularProgressIndicator();
-          },
-        ),
+          final articles = snapshot.data!.articles;
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: articles.length,
+            itemBuilder: (context, index) {
+              final article = articles[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => _launchURL(article.link ?? ''),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12.0),
+                          child: SizedBox(
+                            width: 90,
+                            height: 70,
+                            child: article.imageUrl != null
+                                ? Image.network(
+                                    article.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                      color: theme.colorScheme.surfaceContainerHighest,
+                                      child: Icon(
+                                        Icons.newspaper,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: Icon(
+                                      Icons.newspaper,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                article.title ?? 'No Title',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Click to read more...',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

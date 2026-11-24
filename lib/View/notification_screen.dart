@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../Model/coinModel.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -18,7 +19,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    coinMarketFuture = getCoinMarket(); // Initialize coinMarketFuture
+    coinMarketFuture = getCoinMarket();
   }
 
   Future<List<CoinModel>> getCoinMarket() async {
@@ -65,7 +66,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
       String coinId = transaction['coinId'];
 
       final coinData = coinMarket.firstWhere((coin) => coin.id == coinId,
-          orElse: () => CoinModel(id: coinId, marketCapChangePercentage24H: 0));
+          orElse: () => CoinModel(
+                id: coinId,
+                symbol: coinId,
+                name: coinId,
+                image: '',
+                currentPrice: 0,
+                marketCapRank: 0,
+                totalVolume: 0,
+                high24H: 0,
+                low24H: 0,
+                priceChange24H: 0,
+                marketCapChangePercentage24H: 0,
+                sparklineIn7D: SparklineIn7D(price: []),
+              ));
       double marketCapChange = coinData.marketCapChangePercentage24H;
 
       if (marketCapChange.abs() > 5) {
@@ -79,17 +93,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: Colors.yellow,
-        title: Text('Recent Trade Changes'),
+        title: const Text('Recent Trade Changes'),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: fetchUserTransactions(userId),
         builder: (context, transactionSnapshot) {
           if (transactionSnapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (transactionSnapshot.hasError) {
@@ -97,14 +111,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
           }
 
           if (!transactionSnapshot.hasData || transactionSnapshot.data!.isEmpty) {
-            return Center(child: Text('No transactions found.'));
+            return const Center(child: Text('No transactions found.'));
           }
 
           return FutureBuilder<List<CoinModel>>(
-            future: coinMarketFuture, // Use coinMarketFuture here
+            future: coinMarketFuture,
             builder: (context, coinMarketSnapshot) {
               if (coinMarketSnapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator());
               }
 
               if (coinMarketSnapshot.hasError) {
@@ -112,7 +126,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               }
 
               if (!coinMarketSnapshot.hasData || coinMarketSnapshot.data!.isEmpty) {
-                return Center(child: Text('No coin market data found.'));
+                return const Center(child: Text('No coin market data found.'));
               }
 
               final transactions = transactionSnapshot.data!;
@@ -123,7 +137,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 builder: (context, notificationSnapshot) {
                   if (notificationSnapshot.connectionState ==
                       ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   if (notificationSnapshot.hasError) {
@@ -133,45 +147,57 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
                   if (!notificationSnapshot.hasData ||
                       notificationSnapshot.data!.isEmpty) {
-                    return Center(
+                    return const Center(
                         child: Text('No significant market changes.'));
                   }
 
+                  final notifications = notificationSnapshot.data!;
+
                   return ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: notificationSnapshot.data!.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: notifications.length,
                     itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: Icon(
-                          Icons.notifications,
-                          color: Color(0xffFBC700),
-                          size: 30.0,
-                        ),
-                        title: Text(
-                          notificationSnapshot.data![index],
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                ),
+                                child: Icon(
+                                  Icons.notifications_outlined,
+                                  color: theme.colorScheme.primary,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notifications[index],
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Notification received',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        subtitle: Text(
-                          'Notification received',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios,
-                          color: Color(0xffFBC700),
-                          size: 20.0,
-                        ),
-                        tileColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                          side: BorderSide(color: Color(0xffFBC700), width: 1),
                         ),
                       );
                     },
@@ -182,22 +208,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-class CoinModel {
-  final String id;
-  final double marketCapChangePercentage24H;
-
-  CoinModel({required this.id, required this.marketCapChangePercentage24H});
-
-  factory CoinModel.fromJson(Map<String, dynamic> json) {
-    return CoinModel(
-      id: json['id'],
-      marketCapChangePercentage24H: (json['market_cap_change_percentage_24h'] ??
-          0)
-          .toDouble(),
     );
   }
 }

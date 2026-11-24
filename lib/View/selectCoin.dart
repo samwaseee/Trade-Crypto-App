@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../Model/article.dart';
 import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
+import '../utils/format.dart';
 
 class SelectCoin extends StatefulWidget {
   final dynamic selectItem;
@@ -26,7 +27,7 @@ class _SelectCoinState extends State<SelectCoin> {
   User? user;
   Map<String, dynamic>? userData;
 
-  double _amount = 1.0; // Default amount
+  double _amount = 1.0;
   final TextEditingController _amountController = TextEditingController();
 
   @override
@@ -43,7 +44,7 @@ class _SelectCoinState extends State<SelectCoin> {
       fetchUserData();
     }
 
-    _amountController.text = _amount.toStringAsFixed(2); // Set default value in controller
+    _amountController.text = _amount.toStringAsFixed(2);
   }
 
   Future<void> fetchUserData() async {
@@ -52,7 +53,6 @@ class _SelectCoinState extends State<SelectCoin> {
       if (!doc.exists) {
         throw Exception('User data does not exist!');
       }
-      // Handle user data here
     } catch (e) {
       debugPrint('Error fetching user data');
     }
@@ -60,16 +60,15 @@ class _SelectCoinState extends State<SelectCoin> {
 
   Future<void> buyCoin(String coinId, double amount, double price) async {
     final userDoc = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    final transactionsSubcollection = userDoc.collection('transactions'); // Subcollection for transactions
+    final transactionsSubcollection = userDoc.collection('transactions');
 
     try {
-      // Add a new transaction under the transactions subcollection
       await transactionsSubcollection.add({
-        'type': 'Buy',               // Transaction type
-        'coinId': coinId,            // Coin being bought
-        'amount': amount,            // Amount of the coin bought
-        'price': price,              // Price at which the coin was bought
-        'date': DateTime.now().toIso8601String(), // Transaction date
+        'type': 'Buy',
+        'coinId': coinId,
+        'amount': amount,
+        'price': price,
+        'date': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       throw Exception('Failed to record buy transaction.');
@@ -78,16 +77,15 @@ class _SelectCoinState extends State<SelectCoin> {
 
   Future<void> sellCoin(String coinId, double amount, double price) async {
     final userDoc = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    final transactionsSubcollection = userDoc.collection('transactions'); // Subcollection for transactions
+    final transactionsSubcollection = userDoc.collection('transactions');
 
     try {
-      // Add a new transaction under the transactions subcollection
       await transactionsSubcollection.add({
-        'type': 'Sell',              // Transaction type
-        'coinId': coinId,            // Coin being sold
-        'amount': amount,            // Amount of the coin sold
-        'price': price,              // Price at which the coin was sold
-        'date': DateTime.now().toIso8601String(), // Transaction date
+        'type': 'Sell',
+        'coinId': coinId,
+        'amount': amount,
+        'price': price,
+        'date': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       throw Exception('Failed to record sell transaction.');
@@ -97,7 +95,7 @@ class _SelectCoinState extends State<SelectCoin> {
   void _increaseAmount() {
     setState(() {
       if (_amount < 100.0) {
-        _amount += 0.01; // Increase by 0.01, adjust for your preferred step
+        _amount += 0.01;
         _amountController.text = _amount.toStringAsFixed(2);
       }
     });
@@ -106,480 +104,427 @@ class _SelectCoinState extends State<SelectCoin> {
   void _decreaseAmount() {
     setState(() {
       if (_amount > 0.01) {
-        _amount -= 0.01; // Decrease by 0.01, adjust for your preferred step
+        _amount -= 0.01;
         _amountController.text = _amount.toStringAsFixed(2);
       }
     });
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
-    double myHeight = MediaQuery.of(context).size.height;
-    double myWidth = MediaQuery.of(context).size.width;
-    return SafeArea(
-        child: Scaffold(
-      body: SizedBox(
-        height: myHeight,
-        width: myWidth,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final isPositive = widget.selectItem.marketCapChangePercentage24H >= 0;
+    final changeColor = isPositive ? Colors.green : Colors.red;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.selectItem.name),
+      ),
+      body: SafeArea(
         child: Column(
           children: [
-            //Heading
-            Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: myWidth * 0.05, vertical: myHeight * 0.02),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                          height: myHeight * 0.08,
-                          child: Image.network(widget.selectItem.image)),
-                      SizedBox(
-                        width: myWidth * 0.03,
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.selectItem.id,
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(
-                            height: myHeight * 0.01,
-                          ),
-                          Text(
-                            widget.selectItem.symbol,
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '\$${widget.selectItem.currentPrice}',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black),
-                      ),
-                      SizedBox(
-                        height: myHeight * 0.01,
-                      ),
-                      Text(
-                        '${widget.selectItem.marketCapChangePercentage24H}%',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.normal,
-                            color: widget.selectItem
-                                        .marketCapChangePercentage24H >=
-                                    0
-                                ? Colors.green
-                                : Colors.red),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Divider(),
-
-
             Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: myWidth * 0.05, vertical: myHeight * 0.02),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: [
-                          Text(
-                            'Low',
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.grey),
-                          ),
-                          SizedBox(
-                            height: myHeight * 0.01,
-                          ),
-                          Text(
-                            '\$${widget.selectItem.low24H}',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.black),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            'High',
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.grey),
-                          ),
-                          SizedBox(
-                            height: myHeight * 0.01,
-                          ),
-                          Text(
-                            '\$${widget.selectItem.high24H}',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.black),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            'Vol',
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.grey),
-                          ),
-                          SizedBox(
-                            height: myHeight * 0.01,
-                          ),
-                          Text(
-                            '\$${widget.selectItem.totalVolume/1000}B',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.black),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: myHeight * 0.015,
-                ),
-                SizedBox(
-                  height: myHeight * 0.4,
-                  width: myWidth,
-                  // color: Colors.amber,
-                  child: isRefresh == true
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xffFBC700),
-                          ),
-                        )
-                      : itemChart == null
-                          ? Padding(
-                              padding: EdgeInsets.all(myHeight * 0.06),
-                              child: Center(
-                                child: Text(
-                                  'Attention this Api is free, so you cannot send multiple requests per second, please wait and try again later.',
-                                  style: TextStyle(fontSize: 18),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Heading Header Card
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: Image.network(
+                                    widget.selectItem.image,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.currency_bitcoin, size: 36),
+                                  ),
                                 ),
-                              ),
-                            )
-                          : SfCartesianChart(
-                              trackballBehavior: trackballBehavior,
-                              zoomPanBehavior: ZoomPanBehavior(
-                                  enablePinching: true, zoomMode: ZoomMode.x),
-                              primaryXAxis: DateTimeAxis(),
-                              series: <CandleSeries>[
-                                CandleSeries<ChartModel, DateTime>(
-                                    enableSolidCandles: true,
-                                    enableTooltip: true,
-                                    bullColor: Colors.green,
-                                    bearColor: Colors.red,
-                                    dataSource: itemChart!,
-                                    xValueMapper: (ChartModel sales, _) =>
-                                        DateTime.fromMillisecondsSinceEpoch(sales.time),
-                                    lowValueMapper: (ChartModel sales, _) =>
-                                        sales.low,
-                                    highValueMapper: (ChartModel sales, _) =>
-                                        sales.high,
-                                    openValueMapper: (ChartModel sales, _) =>
-                                        sales.open,
-                                    closeValueMapper: (ChartModel sales, _) =>
-                                        sales.close,
-                                    animationDuration: 550)
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.selectItem.name,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.selectItem.symbol.toUpperCase(),
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                ),
-                SizedBox(
-                  height: myHeight * 0.01,
-                ),
-                Center(
-                  child: SizedBox(
-                    height: myHeight * 0.04,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      itemCount: text.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: myWidth * 0.02),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                textBool = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                textBool[index] = true;
-                              });
-                              setDays(text[index]);
-                              getChart();
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: myWidth * 0.03,
-                                  vertical: myHeight * 0.005),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(5),
-                                color: textBool[index] == true
-                                    ? Color(0xffFBC700).withValues(alpha: 0.3)
-                                    : Colors.transparent,
-                              ),
-                              child: Text(
-                                text[index],
-                                style: TextStyle(fontSize: 18),
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '\$${formatUsd(widget.selectItem.currentPrice)}',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: changeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${isPositive ? '+' : ''}${widget.selectItem.marketCapChangePercentage24H.toStringAsFixed(2)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: changeColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Stats Card (Low / High / Vol)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Column(
+                              children: [
+                                Text(
+                                  'Low (24h)',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '\$${formatUsd(widget.selectItem.low24H)}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'High (24h)',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '\$${formatUsd(widget.selectItem.high24H)}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Volume',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '\$${formatUsd(widget.selectItem.totalVolume)}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Chart Container
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: SizedBox(
+                          height: 260,
+                          child: isRefresh
+                              ? const Center(child: CircularProgressIndicator())
+                              : itemChart == null
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Text(
+                                          'Free API rate limit reached. Please try again in a few seconds.',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    )
+                                  : SfCartesianChart(
+                                      trackballBehavior: trackballBehavior,
+                                      zoomPanBehavior: ZoomPanBehavior(
+                                        enablePinching: true,
+                                        zoomMode: ZoomMode.x,
+                                      ),
+                                      primaryXAxis: const DateTimeAxis(),
+                                      series: <CandleSeries>[
+                                        CandleSeries<ChartModel, DateTime>(
+                                          enableSolidCandles: true,
+                                          enableTooltip: true,
+                                          bullColor: Colors.green,
+                                          bearColor: Colors.red,
+                                          dataSource: itemChart!,
+                                          xValueMapper: (ChartModel sales, _) =>
+                                              DateTime.fromMillisecondsSinceEpoch(sales.time),
+                                          lowValueMapper: (ChartModel sales, _) => sales.low,
+                                          highValueMapper: (ChartModel sales, _) => sales.high,
+                                          openValueMapper: (ChartModel sales, _) => sales.open,
+                                          closeValueMapper: (ChartModel sales, _) => sales.close,
+                                          animationDuration: 550,
+                                        )
+                                      ],
+                                    ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Days selector buttons
+                    Center(
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          scrollDirection: Axis.horizontal,
+                          itemCount: text.length,
+                          itemBuilder: (context, index) {
+                            final isSelected = textBool[index];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: ChoiceChip(
+                                label: Text(text[index]),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    textBool = [false, false, false, false, false, false];
+                                    textBool[index] = true;
+                                  });
+                                  setDays(text[index]);
+                                  getChart();
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // News Header
+                    Text(
+                      'Related News',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // News List
+                    FutureBuilder<NewsResponse>(
+                      future: futureNews,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return const Text('Could not load news');
+                        }
+                        if (!snapshot.hasData || snapshot.data!.articles.isEmpty) {
+                          return const Text('No related news.');
+                        }
+
+                        return Column(
+                          children: snapshot.data!.articles.map((article) {
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              child: ListTile(
+                                leading: article.imageUrl != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          article.imageUrl!,
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              const Icon(Icons.newspaper),
+                                        ),
+                                      )
+                                    : const Icon(Icons.newspaper),
+                                title: Text(
+                                  article.title ?? 'No Title',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                onTap: () => _launchURL(article.link ?? ''),
+                              ),
+                            );
+                          }).toList(),
                         );
                       },
                     ),
-                  ),
+                  ],
                 ),
-                SizedBox(
-                  height: myHeight * 0.01,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: myWidth * 0.06),
-                  child: Text(
-                    'News',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
+              ),
+            ),
+
+            // Bottom Action Bar (Buy / Sell / Amount)
+            Card(
+              margin: EdgeInsets.zero,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        onPressed: () async {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('User not authenticated')),
+                            );
+                            return;
+                          }
+
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            await buyCoin(
+                              widget.selectItem.id,
+                              _amount,
+                              widget.selectItem.currentPrice,
+                            );
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Successfully bought $_amount ${widget.selectItem.id}')),
+                            );
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        child: const Text('Buy'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        FutureBuilder<NewsResponse>(
-                          future: futureNews,
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              return Column(
-                                children: snapshot.data!.articles.map((article) {
-                                  return ListTile(
-                                    trailing: article.imageUrl != null
-                                        ? SizedBox(
-                                      width: 100, // Set the width
-                                      height: 80, // Set the height
-                                      child: Image.network(
-                                        article.imageUrl!,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                        const Icon(Icons.broken_image),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                        : const Icon(Icons.image, size: 100),
-                                    title: Text(article.title ?? 'No Title'),
-                                    onTap: () => _launchURL(article.link ?? ''),
-                                  );
-                                }).toList(),
-                              );
-                            } else if (snapshot.hasError) {
-                              return Text("${snapshot.error}");
-                            }
-                            return CircularProgressIndicator();
-                          },
+                        IconButton(
+                          icon: const Icon(Icons.remove),
+                          onPressed: _decreaseAmount,
+                          tooltip: 'Decrease amount',
+                        ),
+                        SizedBox(
+                          width: 60,
+                          child: TextField(
+                            readOnly: true,
+                            controller: _amountController,
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(vertical: 8),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: _increaseAmount,
+                          tooltip: 'Increase amount',
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        onPressed: () async {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('User not authenticated')),
+                            );
+                            return;
+                          }
+
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            await sellCoin(
+                              widget.selectItem.id,
+                              _amount,
+                              widget.selectItem.currentPrice,
+                            );
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Successfully sold $_amount ${widget.selectItem.id}')),
+                            );
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        child: const Text('Sell'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            )),
-            SizedBox(
-              height: myHeight * 0.09,
-              width: myWidth,
-              // color: Colors.amber,
-              child: Column(
-                children: [
-                  Divider(),
-                  SizedBox(
-                    height: myHeight * 0.0,
-                  ),
-                  Row(
-                    children: [
-                      SizedBox(width: myWidth * 0.02),
-                      Expanded(
-                        flex: 5,
-                        child: GestureDetector(
-                          onTap: () async {
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('User not authenticated')),
-                              );
-                              return;
-                            }
-
-                            try {
-                              // Call buy function
-                              await buyCoin(
-                                widget.selectItem.id,
-                                _amount, // Use the amount selected
-                                widget.selectItem.currentPrice,
-                              );
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Successfully bought $_amount ${widget.selectItem.id}')),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: $e')),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: myHeight * 0.015),
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: Color(0xff1cad1f)),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Buy',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.remove),
-                            onPressed: _decreaseAmount,
-                            tooltip: 'Decrease amount',
-                          ),
-                          SizedBox(
-                            width: myWidth * 0.2,
-                            child: TextField(
-                              readOnly: true,
-                              controller: _amountController,
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                              decoration: InputDecoration(
-                                labelText: 'Amount',
-                                hintText: 'Enter amount',
-                                border: OutlineInputBorder(),
-                              ),
-                              onChanged: (value) {
-                                final parsedAmount = double.tryParse(value) ?? 0.01;
-                                if (_amount != parsedAmount) {
-                                  setState(() {
-                                    _amount = parsedAmount.clamp(0.01, 100.0); // Ensure range
-                                    _amountController.text = _amount.toStringAsFixed(2);
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.add),
-                            onPressed: _increaseAmount,
-                            tooltip: 'Increase amount',
-                          ),
-                        ],
-                      ),
-                      Expanded(
-                        flex: 5,
-                        child: GestureDetector(
-                          onTap: () async {
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('User not authenticated')),
-                              );
-                              return;
-                            }
-
-                            try {
-                              // Call sell function
-                              await sellCoin(
-                                widget.selectItem.id,
-                                _amount, // Use the amount selected
-                                widget.selectItem.currentPrice,
-                              );
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Successfully sold $_amount ${widget.selectItem.id}')),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: $e')),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: myHeight * 0.015),
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: Color(0xd5ff1200)),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Sell',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: myWidth * 0.02),
-                    ],
-                  ),
-                ],
               ),
-            )
+            ),
           ],
         ),
       ),
-    ));
+    );
   }
 
   List<String> text = ['D', 'W', 'M', '3M', '6M', 'Y'];
