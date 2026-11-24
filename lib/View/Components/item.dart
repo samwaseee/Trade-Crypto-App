@@ -1,4 +1,3 @@
-import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
@@ -58,9 +57,8 @@ class Item extends StatelessWidget {
                 errorBuilder: (context, error, stackTrace) => const Icon(Icons.currency_bitcoin, size: 28),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
-              flex: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -110,82 +108,54 @@ class Item extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              flex: 2,
-              child: SizedBox(
-                height: 36,
-                child: Sparkline(
-                  data: item.sparklineIn7D.price,
-                  lineWidth: 2.0,
-                  lineColor: profitColor,
-                  fillMode: FillMode.below,
-                  fillGradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.7],
-                    colors: [
-                      profitColor,
-                      profitColor.withValues(alpha: 0.1),
-                    ],
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: profitBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    formatSignedUsd(profit),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: profitColor,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: profitBgColor,
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 4),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 4,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '\$${formatUsd(item.currentPrice)}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: profitBgColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
-                        formatSignedUsd(profit),
+                        plPercentStr,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: profitColor,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 4,
-                    runSpacing: 2,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        '\$${formatUsd(item.currentPrice)}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: profitBgColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          plPercentStr,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: profitColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
