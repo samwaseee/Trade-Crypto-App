@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
 
 class TradeService {
@@ -15,10 +16,10 @@ class TradeService {
     required double price,
   }) async {
     if (type != 'Buy' && type != 'Sell') {
-      throw ArgumentError("Invalid trade type: '$type'. Expected 'Buy' or 'Sell'.");
+      throw Exception("Invalid trade type: '$type'. Expected 'Buy' or 'Sell'.");
     }
     if (amount <= 0 || price <= 0) {
-      throw ArgumentError('Amount and price must be greater than zero.');
+      throw Exception('Amount and price must be greater than zero.');
     }
 
     final cost = roundTo(amount * price, 8);
@@ -35,8 +36,13 @@ class TradeService {
       final currentWallet = (userData['wallet'] ?? 0.0) as num;
 
       if (currentWallet.toDouble() < cost) {
-        throw Exception(
-            'Insufficient wallet balance. Needed \$${roundMoney(cost)}, available \$${roundMoney(currentWallet.toDouble())}.');
+        if (type == 'Sell') {
+          throw Exception(
+              'Not enough collateral to open this short: need \$${formatUsd(cost)}, available \$${formatUsd(currentWallet.toDouble())}.');
+        } else {
+          throw Exception(
+              'Not enough balance: need \$${formatUsd(cost)}, available \$${formatUsd(currentWallet.toDouble())}.');
+        }
       }
 
       final newWallet = roundTo(currentWallet.toDouble() - cost, 8);

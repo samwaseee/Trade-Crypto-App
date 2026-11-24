@@ -14,7 +14,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isEditing = false;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
 
   User? user;
   Map<String, dynamic>? userData;
@@ -36,7 +35,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (userData != null) {
         nameController.text = userData!['name'] ?? '';
         phoneController.text = userData!['phone'] ?? '';
-        emailController.text = userData!['email'] ?? '';
       }
     });
   }
@@ -46,7 +44,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await FirebaseFirestore.instance.collection('users').doc(user!.uid).update({
         'name': nameController.text,
         'phone': phoneController.text,
-        'email': emailController.text,
       });
       if (!mounted) return;
       setState(() {

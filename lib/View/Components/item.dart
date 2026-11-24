@@ -29,6 +29,11 @@ class Item extends StatelessWidget {
       currentPrice: currentPrice,
       amount: amount,
     );
+    final positionCost = (transaction['cost'] as num?)?.toDouble() ?? (entryPrice * amount);
+    final plPercent = positionCost == 0.0 ? 0.0 : (profit / positionCost) * 100;
+    final isPlPositive = plPercent >= 0;
+    final plPercentStr = '${isPlPositive ? '+' : ''}${plPercent.toStringAsFixed(2)}%';
+
     final isZero = profit.abs() < 0.005;
     final isPositive = profit >= 0;
 
@@ -38,9 +43,6 @@ class Item extends StatelessWidget {
     final profitBgColor = isZero
         ? colorScheme.surfaceContainerHighest
         : profitColor.withValues(alpha: 0.12);
-
-    final isChangePositive = item.marketCapChangePercentage24H >= 0;
-    final changeColor = isChangePositive ? Colors.green : Colors.red;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -92,7 +94,7 @@ class Item extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          transaction['type'],
+                          tradeLabel(type),
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
@@ -168,15 +170,15 @@ class Item extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: changeColor.withValues(alpha: 0.12),
+                          color: profitBgColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${isChangePositive ? '+' : ''}${item.marketCapChangePercentage24H.toStringAsFixed(2)}%',
+                          plPercentStr,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: changeColor,
+                            color: profitColor,
                           ),
                         ),
                       ),

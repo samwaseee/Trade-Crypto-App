@@ -1,0 +1,14 @@
+{
+  "name": "trade-crypto-rules-tests",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.0",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^15.37.0",
+    "jest": "^29.0.0"
+  },
+  "scripts": {
+    "test": "npx firebase emulators:exec --only firestore \"npx jest\""
+  }
+}

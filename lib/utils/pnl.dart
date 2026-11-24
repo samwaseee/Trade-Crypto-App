@@ -15,6 +15,12 @@ double computePnl({
   }
 }
 
+String tradeLabel(String type) {
+  if (type == 'Buy') return 'Long';
+  if (type == 'Sell') return 'Short';
+  return type;
+}
+
 double roundMoney(double v) => (v * 100).roundToDouble() / 100;
 
 double roundTo(double v, int decimals) {

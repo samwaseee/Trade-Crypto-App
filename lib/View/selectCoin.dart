@@ -11,6 +11,7 @@ import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
 import '../Services/trade_service.dart';
 import '../utils/format.dart';
+import '../utils/pnl.dart';
 
 class SelectCoin extends StatefulWidget {
   final dynamic selectItem;
@@ -29,6 +30,7 @@ class _SelectCoinState extends State<SelectCoin> {
   Map<String, dynamic>? userData;
 
   double _amount = 1.0;
+  bool _amountInvalid = false;
   final TextEditingController _amountController = TextEditingController();
 
   @override
@@ -68,6 +70,16 @@ class _SelectCoinState extends State<SelectCoin> {
       return;
     }
 
+    final normalized = _amountController.text.replaceAll(',', '.');
+    final parsed = double.tryParse(normalized);
+    if (_amountInvalid || parsed == null || parsed <= 0 || parsed > 1000000.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter an amount between 0.00000001 and 1,000,000')),
+      );
+      return;
+    }
+    _amount = roundTo(parsed, 8);
+
     final messenger = ScaffoldMessenger.of(context);
     try {
       await TradeService().openTrade(
@@ -77,11 +89,12 @@ class _SelectCoinState extends State<SelectCoin> {
         amount: _amount,
         price: (widget.selectItem.currentPrice as num).toDouble(),
       );
+      final positionType = type == 'Buy' ? 'long' : 'short';
       messenger.showSnackBar(
-        SnackBar(content: Text('Successfully opened $type trade for $_amount ${widget.selectItem.id}')),
+        SnackBar(content: Text('Opened $positionType position for $_amount ${widget.selectItem.id}')),
       );
     } catch (e) {
-      final message = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      final message = e.toString().replaceFirst(RegExp(r'^(Exception|Invalid argument\(s\)):\s*'), '');
       messenger.showSnackBar(
         SnackBar(content: Text('Error: $message')),
       );
@@ -90,8 +103,9 @@ class _SelectCoinState extends State<SelectCoin> {
 
   void _increaseAmount() {
     setState(() {
-      if (_amount < 100.0) {
-        _amount += 0.01;
+      _amountInvalid = false;
+      if (_amount < 1000000.0) {
+        _amount = roundTo(_amount + 0.01 > 1000000.0 ? 1000000.0 : _amount + 0.01, 8);
         _amountController.text = _amount.toStringAsFixed(2);
       }
     });
@@ -99,8 +113,9 @@ class _SelectCoinState extends State<SelectCoin> {
 
   void _decreaseAmount() {
     setState(() {
+      _amountInvalid = false;
       if (_amount > 0.01) {
-        _amount -= 0.01;
+        _amount = roundTo(_amount - 0.01 < 0.01 ? 0.01 : _amount - 0.01, 8);
         _amountController.text = _amount.toStringAsFixed(2);
       }
     });
@@ -412,59 +427,92 @@ class _SelectCoinState extends State<SelectCoin> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        onPressed: () => openTrade('Buy'),
-                        child: const Text('Buy'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove),
-                          onPressed: _decreaseAmount,
-                          tooltip: 'Decrease amount',
-                        ),
-                        SizedBox(
-                          width: 60,
-                          child: TextField(
-                            readOnly: true,
-                            controller: _amountController,
-                            textAlign: TextAlign.center,
-                            decoration: const InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(vertical: 8),
-                              isDense: true,
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: const Size.fromHeight(48),
                             ),
+                            onPressed: _amountInvalid ? null : () => openTrade('Buy'),
+                            child: const Text('Buy'),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: _increaseAmount,
-                          tooltip: 'Increase amount',
+                        const SizedBox(width: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              onPressed: _decreaseAmount,
+                              tooltip: 'Decrease amount',
+                            ),
+                            SizedBox(
+                              width: 80,
+                              child: TextField(
+                                controller: _amountController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                textAlign: TextAlign.center,
+                                decoration: const InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                  isDense: true,
+                                ),
+                                onChanged: (val) {
+                                  final normalized = val.replaceAll(',', '.');
+                                  final parsed = double.tryParse(normalized);
+                                  setState(() {
+                                    if (parsed == null || parsed <= 0 || parsed > 1000000.0) {
+                                      _amountInvalid = true;
+                                    } else {
+                                      _amount = roundTo(parsed, 8);
+                                      _amountInvalid = false;
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              onPressed: _increaseAmount,
+                              tooltip: 'Increase amount',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            onPressed: _amountInvalid ? null : () => openTrade('Sell'),
+                            child: const Text('Short'),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        onPressed: () => openTrade('Sell'),
-                        child: const Text('Sell'),
-                      ),
-                    ),
+                    const SizedBox(height: 8),
+                    _amountInvalid
+                        ? Text(
+                            'Enter a valid amount (up to 1,000,000)',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : Text(
+                            'Collateral / cost: \$${formatUsd(_amount * (widget.selectItem.currentPrice as num).toDouble())}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ],
                 ),
               ),

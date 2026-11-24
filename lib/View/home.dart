@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -183,42 +184,105 @@ class _HomeState extends State<Home> {
                         snapshot.data!.data() as Map<String, dynamic>;
                     final walletAmount = (userData['wallet'] ?? 0).toDouble();
 
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    return StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: fetchUserTransactions(userId),
+                      builder: (context, txSnapshot) {
+                        double inPositions = 0.0;
+                        double equityPositions = 0.0;
+                        final hasData = txSnapshot.hasData;
+                        final transactions = txSnapshot.data ?? [];
+                        final hasMarketData = coinMarket != null && coinMarket!.isNotEmpty;
+
+                        if (hasData) {
+                          for (var tx in transactions) {
+                            final type = tx['type'];
+                            if (type != 'Buy' && type != 'Sell') continue;
+                            final cost = (tx['cost'] as num?)?.toDouble();
+                            if (cost != null) {
+                              inPositions += cost;
+                            }
+
+                            if (hasMarketData) {
+                              final matchingCoins = coinMarket!.where((coin) => coin.id == tx['coinId']);
+                              if (matchingCoins.isNotEmpty) {
+                                final coinData = matchingCoins.first;
+                                final entryPrice = (tx['price'] as num?)?.toDouble() ?? 0.0;
+                                final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+                                final currentPrice = (coinData.currentPrice as num?)?.toDouble() ?? 0.0;
+                                final profit = computePnl(
+                                  type: type,
+                                  entryPrice: entryPrice,
+                                  currentPrice: currentPrice,
+                                  amount: amount,
+                                );
+                                final txCost = cost ?? 0.0;
+                                equityPositions += max(0.0, txCost + profit);
+                              }
+                            }
+                          }
+                        }
+
+                        final equity = walletAmount + equityPositions;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Wallet balance',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Available balance',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '\$${formatUsd(walletAmount)}',
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (hasData) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'In positions: \$${formatUsd(inPositions)}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (hasMarketData) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Equity: \$${formatUsd(equity)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '\$${formatUsd(walletAmount)}',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                              ),
+                              child: Image.asset(
+                                'assets/icons/5.1.png',
+                                width: 28,
+                                height: 28,
                               ),
                             ),
                           ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                          ),
-                          child: Image.asset(
-                            'assets/icons/5.1.png',
-                            width: 28,
-                            height: 28,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -342,7 +406,7 @@ class _HomeState extends State<Home> {
                                     Text('Coin: ${coinData.id}'),
                                     Text('Amount: ${transaction['amount']}'),
                                     Text('Price: \$${transaction['price']}'),
-                                    Text('Type: $type'),
+                                    Text('Type: ${tradeLabel(type)}'),
                                     Text('Profit: ${formatSignedUsd(profit)}'),
                                     Text(
                                         'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
@@ -403,7 +467,7 @@ class _HomeState extends State<Home> {
                                                     'Trade closed successfully!')),
                                           );
                                         } catch (e) {
-                                          final message = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+                                          final message = e.toString().replaceFirst(RegExp(r'^(Exception|Invalid argument\(s\)):\s*'), '');
                                           if (!context.mounted) return;
                                           ScaffoldMessenger.of(
                                                   context)

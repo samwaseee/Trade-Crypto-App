@@ -24,18 +24,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> register() async {
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+
+    if (name.isEmpty || name.length > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid name (up to 100 characters).')),
+      );
+      return;
+    }
+
+    if (phone.length > 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone number cannot exceed 30 characters.')),
+      );
+      return;
+    }
+
+    UserCredential? userCredential;
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
       // Save additional user data to Firestore
       try {
-        await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
-          'name': nameController.text,
-          'phone': phoneController.text,
-          'email': emailController.text,
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+          'name': nameController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'email': userCredential.user!.email!,
           'wallet': 10000,
         });
 
@@ -49,6 +67,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Navigate back to the login screen
         Navigator.pop(context);
       } catch (e) {
+        try {
+          await userCredential.user?.delete();
+        } catch (_) {}
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save user data: ${e.toString()}')),
@@ -80,19 +102,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             TextField(
               controller: nameController,
+              maxLength: 100,
               decoration: const InputDecoration(
                 labelText: 'Name',
                 hintText: 'Enter your name',
                 prefixIcon: Icon(Icons.person_outline),
+                counterText: '',
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: phoneController,
+              maxLength: 30,
               decoration: const InputDecoration(
                 labelText: 'Phone Number',
                 hintText: 'Enter your phone number',
                 prefixIcon: Icon(Icons.phone_outlined),
+                counterText: '',
               ),
               keyboardType: TextInputType.phone,
             ),
