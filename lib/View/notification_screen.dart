@@ -14,10 +14,12 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
   Future<List<CoinModel>>? coinMarketFuture;
+  late final Stream<List<Map<String, dynamic>>> _transactionsStream;
 
   @override
   void initState() {
     super.initState();
+    _transactionsStream = fetchUserTransactions(userId);
     coinMarketFuture = getCoinMarket();
   }
 
@@ -44,8 +46,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
   }
 
-  Future<List<String>> checkNotifications(
-      List<Map<String, dynamic>> transactions, List<CoinModel> coinMarket) async {
+  List<String> checkNotifications(
+      List<Map<String, dynamic>> transactions, List<CoinModel> coinMarket) {
     List<String> notifications = [];
 
     for (var transaction in transactions) {
@@ -86,7 +88,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         title: const Text('Recent Trade Changes'),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: fetchUserTransactions(userId),
+        stream: _transactionsStream,
         builder: (context, transactionSnapshot) {
           if (transactionSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -117,76 +119,59 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
               final transactions = transactionSnapshot.data!;
               final coinMarket = coinMarketSnapshot.data!;
+              final notifications = checkNotifications(transactions, coinMarket);
 
-              return FutureBuilder<List<String>>(
-                future: checkNotifications(transactions, coinMarket),
-                builder: (context, notificationSnapshot) {
-                  if (notificationSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              if (notifications.isEmpty) {
+                return const Center(
+                    child: Text('No significant market changes.'));
+              }
 
-                  if (notificationSnapshot.hasError) {
-                    return Center(
-                        child: Text('Error: ${notificationSnapshot.error}'));
-                  }
-
-                  if (!notificationSnapshot.hasData ||
-                      notificationSnapshot.data!.isEmpty) {
-                    return const Center(
-                        child: Text('No significant market changes.'));
-                  }
-
-                  final notifications = notificationSnapshot.data!;
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                                ),
-                                child: Icon(
-                                  Icons.notifications_outlined,
-                                  color: theme.colorScheme.primary,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      notifications[index],
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Notification received',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                            ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: theme.colorScheme.primary,
+                              size: 24,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notifications[index],
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Notification received',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               );
