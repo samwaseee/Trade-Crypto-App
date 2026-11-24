@@ -1,5 +1,6 @@
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/utils/format.dart';
 
 class Item extends StatelessWidget {
   final dynamic item;
@@ -17,44 +18,62 @@ class Item extends StatelessWidget {
 
     final isBuy = transaction['type'] == 'Buy';
     final profit = isBuy ? buyprofit : sellprofit;
+    final isZero = profit.abs() < 0.005;
     final isPositive = profit >= 0;
-    final profitColor = isPositive ? Colors.green : Colors.red;
+
+    final profitColor = isZero
+        ? colorScheme.onSurfaceVariant
+        : (isPositive ? Colors.green : Colors.red);
+    final profitBgColor = isZero
+        ? colorScheme.surfaceContainerHighest
+        : profitColor.withValues(alpha: 0.12);
 
     final isChangePositive = item.marketCapChangePercentage24H >= 0;
     final changeColor = isChangePositive ? Colors.green : Colors.red;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
             SizedBox(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               child: Image.network(
                 item.image,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.currency_bitcoin, size: 30),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.currency_bitcoin, size: 28),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
-              flex: 3,
+              flex: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.id,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        '${transaction['amount'].toStringAsFixed(2)} @ \$${transaction['price']}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.symbol.toUpperCase(),
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -68,10 +87,17 @@ class Item extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${transaction['amount'].toStringAsFixed(2)} @ \$${formatUsd(transaction['price'])}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(
               flex: 2,
               child: SizedBox(
@@ -93,36 +119,41 @@ class Item extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: profitColor.withValues(alpha: 0.12),
+                      color: profitBgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      '${isPositive ? '+' : ''}\$$profit',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: profitColor,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        formatSignedUsd(profit),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: profitColor,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 4,
+                    runSpacing: 2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        '\$${item.currentPrice}',
+                        '\$${formatUsd(item.currentPrice)}',
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
-                      const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(

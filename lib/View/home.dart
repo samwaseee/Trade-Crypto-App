@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:my_crypto/Model/coinModel.dart';
+import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_crypto/utils/format.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -23,14 +25,6 @@ class _HomeState extends State<Home> {
   void initState() {
     getCoinMarket();
     super.initState();
-  }
-
-  int _selectedTabIndex = 0;
-
-  void _onTabTapped(int index) {
-    setState(() {
-      _selectedTabIndex = index;
-    });
   }
 
   Stream<List<Map<String, dynamic>>> fetchUserTransactions(String userId) {
@@ -83,349 +77,499 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 0, label: Text('Main portfolio')),
-            ButtonSegment(value: 1, label: Text('Top 10 coins')),
-            ButtonSegment(value: 2, label: Text('Experimental')),
-          ],
-          selected: {_selectedTabIndex},
-          onSelectionChanged: (newSelection) {
-            _onTabTapped(newSelection.first);
-          },
-          style: const ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          centerTitle: false,
+          title: Text(
+            'Trade Crypto',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          bottom: TabBar(
+            tabs: const [
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Main portfolio'),
+                ),
+              ),
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Top 10 coins'),
+                ),
+              ),
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Experimental'),
+                ),
+              ),
+            ],
           ),
         ),
+        body: TabBarView(
+          children: [
+            _buildPortfolioTab(),
+            _buildTop10Tab(),
+            _buildExperimentalTab(),
+          ],
+        ),
       ),
-      body: _getBodyContent(_selectedTabIndex),
     );
   }
 
-  Widget _getBodyContent(int index) {
-    switch (index) {
-      case 0:
-        return RefreshIndicator(
-          onRefresh: getCoinMarket,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Wallet Card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: StreamBuilder<DocumentSnapshot>(
-                      stream: fetchWalletStream(userId),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return Text('Error: ${snapshot.error}');
-                        }
-                        if (!snapshot.hasData || !snapshot.data!.exists) {
-                          return const Text('No wallet data found.');
-                        }
+  Widget _buildMarketStateWidget() {
+    if (isRefreshing) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (coinMarket == null || coinMarket!.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Market data couldn\'t be loaded (Free API rate limited). Please try again.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => getCoinMarket(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
 
-                        final userData =
-                            snapshot.data!.data() as Map<String, dynamic>;
-                        final walletAmount = (userData['wallet'] ?? 0).toDouble();
+  Widget _buildStateWidgetForTab(BoxConstraints constraints) {
+    final stateWidget = _buildMarketStateWidget();
+    return RefreshIndicator(
+      onRefresh: getCoinMarket,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: stateWidget),
+        ),
+      ),
+    );
+  }
 
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildPortfolioTab() {
+    return RefreshIndicator(
+      onRefresh: getCoinMarket,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Wallet Card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: StreamBuilder<DocumentSnapshot>(
+                  stream: fetchWalletStream(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return const Text('No wallet data found.');
+                    }
+
+                    final userData =
+                        snapshot.data!.data() as Map<String, dynamic>;
+                    final walletAmount = (userData['wallet'] ?? 0).toDouble();
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Wallet balance',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '\$${walletAmount.toStringAsFixed(4)}',
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                            Text(
+                              'Wallet balance',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
-                              child: Image.asset(
-                                'assets/icons/5.1.png',
-                                width: 28,
-                                height: 28,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '\$${formatUsd(walletAmount)}',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                  ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                          ),
+                          child: Image.asset(
+                            'assets/icons/5.1.png',
+                            width: 28,
+                            height: 28,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 24),
-                // Assets Section Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text(
-                        'Assets',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Assets Section Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Row(
+                children: const [
+                  Text(
+                    'Assets',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Assets Content Area
+            if (isRefreshing)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (coinMarket == null || coinMarket!.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Market data couldn\'t be loaded (Free API rate limited). Please try again.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
                       ),
-                      Icon(Icons.add),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => getCoinMarket(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try again'),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                // Assets Content
-                isRefreshing
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                    : coinMarket == null || coinMarket!.isEmpty
-                        ? Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Column(
-                                children: [
-                                  const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Market data couldn\'t be loaded (Free API rate limited). Please try again.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 16),
+              )
+            else
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: fetchUserTransactions(userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return const Center(
+                        child: Text('Error loading transactions'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Center(
+                            child: Text('No transactions found.')),
+                      ),
+                    );
+                  }
+
+                  userTransactions = snapshot.data;
+                  userTransactions!.sort((a, b) {
+                    DateTime dateA = DateTime.parse(a['date']);
+                    DateTime dateB = DateTime.parse(b['date']);
+                    return dateB.compareTo(dateA);
+                  });
+
+                  return ListView.builder(
+                    itemCount: userTransactions!.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      final transaction = userTransactions![index];
+
+                      final matchingCoins = coinMarket!.where((coin) => coin.id == transaction['coinId']);
+                      if (matchingCoins.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      final coinData = matchingCoins.first;
+
+                      double buyprofit = double.parse(
+                          (coinData.currentPrice -
+                                  transaction['price'])
+                              .toStringAsFixed(2));
+                      double sellprofit = double.parse(
+                          (transaction['price'] -
+                                  coinData.currentPrice)
+                              .toStringAsFixed(2));
+
+                      return InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Transaction Details'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Coin: ${coinData.id}'),
+                                    Text('Amount: ${transaction['amount']}'),
+                                    Text('Price: \$${transaction['price']}'),
+                                    Text('Type: ${transaction['type']}'),
+                                    transaction['type'] == 'Buy'
+                                        ? Text('Profit: \$$buyprofit')
+                                        : Text('Profit: \$$sellprofit'),
+                                    Text(
+                                        'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
+                                    Text('Current Price: \$${coinData.currentPrice}'),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Close'),
                                   ),
-                                  const SizedBox(height: 16),
-                                  FilledButton.icon(
-                                    onPressed: () => getCoinMarket(),
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Try again'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : StreamBuilder<List<Map<String, dynamic>>>(
-                            stream: fetchUserTransactions(userId),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                    child: CircularProgressIndicator());
-                              }
-                              if (snapshot.hasError) {
-                                return const Center(
-                                    child: Text('Error loading transactions'));
-                              }
-                              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                                return const Card(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(24.0),
-                                    child: Center(
-                                        child: Text('No transactions found.')),
-                                  ),
-                                );
-                              }
-
-                              userTransactions = snapshot.data;
-                              userTransactions!.sort((a, b) {
-                                DateTime dateA = DateTime.parse(a['date']);
-                                DateTime dateB = DateTime.parse(b['date']);
-                                return dateB.compareTo(dateA);
-                              });
-
-                              return ListView.builder(
-                                itemCount: userTransactions!.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemBuilder: (context, index) {
-                                  final transaction = userTransactions![index];
-
-                                  // Task 4 bug guard: check if coin exists in coinMarket
-                                  final matchingCoins = coinMarket!.where((coin) => coin.id == transaction['coinId']);
-                                  if (matchingCoins.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  final coinData = matchingCoins.first;
-
-                                  double buyprofit = double.parse(
-                                      (coinData.currentPrice -
-                                              transaction['price'])
-                                          .toStringAsFixed(2));
-                                  double sellprofit = double.parse(
-                                      (transaction['price'] -
-                                              coinData.currentPrice)
-                                          .toStringAsFixed(2));
-
-                                  return InkWell(
-                                    onTap: () {
-                                      showDialog(
+                                  TextButton(
+                                    onPressed: () async {
+                                      final confirm =
+                                          await showDialog<bool>(
                                         context: context,
                                         builder: (BuildContext context) {
                                           return AlertDialog(
-                                            title: const Text('Transaction Details'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text('Coin: ${coinData.id}'),
-                                                Text('Amount: ${transaction['amount']}'),
-                                                Text('Price: \$${transaction['price']}'),
-                                                Text('Type: ${transaction['type']}'),
-                                                transaction['type'] == 'Buy'
-                                                    ? Text('Profit: \$$buyprofit')
-                                                    : Text('Profit: \$$sellprofit'),
-                                                Text(
-                                                    'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
-                                                Text('Current Price: \$${coinData.currentPrice}'),
-                                              ],
-                                            ),
+                                            title: const Text('Confirm Close Trade'),
+                                            content: const Text(
+                                                'Are you sure you want to close this trade?'),
                                             actions: [
                                               TextButton(
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                child: const Text('Close'),
+                                                onPressed: () =>
+                                                    Navigator.pop(
+                                                        context,
+                                                        false),
+                                                child: const Text('Cancel'),
                                               ),
                                               TextButton(
-                                                onPressed: () async {
-                                                  final confirm =
-                                                      await showDialog<bool>(
-                                                    context: context,
-                                                    builder: (BuildContext context) {
-                                                      return AlertDialog(
-                                                        title: const Text('Confirm Close Trade'),
-                                                        content: const Text(
-                                                            'Are you sure you want to close this trade?'),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.pop(
-                                                                    context,
-                                                                    false),
-                                                            child: const Text('Cancel'),
-                                                          ),
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.pop(
-                                                                    context,
-                                                                    true),
-                                                            child: const Text('Close Trade'),
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  );
-
-                                                  if (confirm == true) {
-                                                    try {
-                                                      await closeTrade(
-                                                          userId,
-                                                          transaction['id'],
-                                                          transaction['type'] ==
-                                                                  'Buy'
-                                                              ? buyprofit
-                                                              : sellprofit);
-                                                      if (!context.mounted) return;
-                                                      Navigator.pop(context);
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                            content: Text(
-                                                                'Trade closed successfully!')),
-                                                      );
-                                                    } catch (e) {
-                                                      if (!context.mounted) return;
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        SnackBar(
-                                                            content: Text(
-                                                                'Failed to close trade: $e')),
-                                                      );
-                                                    }
-                                                  }
-                                                },
+                                                onPressed: () =>
+                                                    Navigator.pop(
+                                                        context,
+                                                        true),
                                                 child: const Text('Close Trade'),
                                               ),
                                             ],
                                           );
                                         },
                                       );
+
+                                      if (confirm == true) {
+                                        try {
+                                          await closeTrade(
+                                              userId,
+                                              transaction['id'],
+                                              transaction['type'] ==
+                                                      'Buy'
+                                                  ? buyprofit
+                                                  : sellprofit);
+                                          if (!context.mounted) return;
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(
+                                                  context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Trade closed successfully!')),
+                                          );
+                                        } catch (e) {
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(
+                                                  context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text(
+                                                    'Failed to close trade: $e')),
+                                          );
+                                        }
+                                      }
                                     },
-                                    child: Item(
-                                      item: coinData,
-                                      transaction: transaction,
-                                    ),
-                                  );
-                                },
+                                    child: const Text('Close Trade'),
+                                  ),
+                                ],
                               );
                             },
-                          ),
-                const SizedBox(height: 24),
-                // Recommend to Buy Section Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Row(
-                    children: const [
-                      Text(
-                        'Recommend to Buy',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                          );
+                        },
+                        child: Item(
+                          item: coinData,
+                          transaction: transaction,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            const SizedBox(height: 24),
+            // Recommend to Buy Section Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Row(
+                children: const [
+                  Text(
+                    'Recommend to Buy',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Recommend to Buy Content Area
+            if (isRefreshing)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: CircularProgressIndicator(),
                 ),
-                const SizedBox(height: 12),
-                // Recommend to Buy Content
-                SizedBox(
-                  height: 160,
-                  child: isRefreshing
-                      ? const Center(child: CircularProgressIndicator())
-                      : coinMarket == null || coinMarket!.isEmpty
-                          ? const SizedBox.shrink()
-                          : ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: coinMarket!.length,
-                              itemBuilder: (context, index) {
-                                return Item2(
-                                  item: coinMarket![index],
-                                );
-                              },
-                            ),
+              )
+            else if (coinMarket == null || coinMarket!.isEmpty)
+              const SizedBox.shrink()
+            else
+              SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: coinMarket!.length,
+                  itemBuilder: (context, index) {
+                    return Item2(
+                      item: coinMarket![index],
+                    );
+                  },
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTop10Tab() {
+    if (isRefreshing || coinMarket == null || coinMarket!.isEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) => _buildStateWidgetForTab(constraints),
+      );
+    }
+
+    final top10Coins = coinMarket!
+        .where((coin) => coin.marketCapRank > 0)
+        .toList()
+      ..sort((a, b) => a.marketCapRank.compareTo(b.marketCapRank));
+    final limitedTop10 = top10Coins.take(10).toList();
+
+    return RefreshIndicator(
+      onRefresh: getCoinMarket,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        itemCount: limitedTop10.length,
+        itemBuilder: (context, index) {
+          final coin = limitedTop10[index];
+          return CoinTile(
+            coin: coin,
+            rank: coin.marketCapRank,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildExperimentalTab() {
+    if (isRefreshing || coinMarket == null || coinMarket!.isEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) => _buildStateWidgetForTab(constraints),
+      );
+    }
+
+    final sortedByChange = List<CoinModel>.from(coinMarket!)
+      ..sort((a, b) => b.marketCapChangePercentage24H.compareTo(a.marketCapChangePercentage24H));
+
+    final topGainers = sortedByChange.take(5).toList();
+    final topLosers = sortedByChange.reversed.take(5).toList();
+
+    return RefreshIndicator(
+      onRefresh: getCoinMarket,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Top Gainers',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
-        );
-      case 1:
-        return const Center(child: Text('Top 10 coins content'));
-      case 2:
-        return const Center(child: Text('Experimental content'));
-      default:
-        return const Center(child: Text('Main portfolio content'));
-    }
+          ...topGainers.map((coin) => CoinTile(coin: coin)),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Top Losers',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          ...topLosers.map((coin) => CoinTile(coin: coin)),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 
   List? coinMarket = [];
@@ -443,21 +587,25 @@ class _HomeState extends State<Home> {
         "Content-Type": "application/json",
         "Accept": "application/json",
       });
+      if (!mounted) return;
       setState(() {
         isRefreshing = false;
       });
       if (response.statusCode == 200) {
         var x = response.body;
         coinMarketList = coinModelFromJson(x);
+        if (!mounted) return;
         setState(() {
           coinMarket = coinMarketList;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           coinMarket = [];
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isRefreshing = false;
         coinMarket = [];

@@ -53,6 +53,14 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         indicatorColor: colorScheme.primary.withValues(alpha: 0.3),
       ),
+      tabBarTheme: TabBarThemeData(
+        indicatorColor: colorScheme.primary,
+        dividerColor: Colors.transparent,
+        labelColor: colorScheme.onSurface,
+        unselectedLabelColor: colorScheme.onSurfaceVariant,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+      ),
     );
   }
 
@@ -107,6 +115,14 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         indicatorColor: colorScheme.primary.withValues(alpha: 0.3),
+      ),
+      tabBarTheme: TabBarThemeData(
+        indicatorColor: colorScheme.primary,
+        dividerColor: Colors.transparent,
+        labelColor: colorScheme.onSurface,
+        unselectedLabelColor: colorScheme.onSurfaceVariant,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
       ),
     );
   }
