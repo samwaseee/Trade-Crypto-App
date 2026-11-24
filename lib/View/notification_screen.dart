@@ -1,9 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../Model/coinModel.dart';
+import '../Services/market_repository.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -23,20 +22,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<List<CoinModel>> getCoinMarket() async {
-    const url =
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&sparkline=true';
-
-    var response = await http.get(Uri.parse(url), headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    });
-
-    if (response.statusCode == 200) {
-      var data = json.decode(response.body);
-      return List<CoinModel>.from(data.map((item) => CoinModel.fromJson(item)));
-    } else {
-      throw Exception('Failed to load coin market data');
-    }
+    return MarketRepository.instance.getMarkets();
   }
 
   Stream<List<Map<String, dynamic>>> fetchUserTransactions(String userId) {

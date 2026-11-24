@@ -7,7 +7,7 @@ import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:http/http.dart' as http;
+import 'package:my_crypto/Services/market_repository.dart';
 import 'package:my_crypto/Services/trade_service.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
@@ -126,7 +126,7 @@ class _HomeState extends State<Home> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: () => getCoinMarket(),
+                    onPressed: () => getCoinMarket(force: true),
                     icon: const Icon(Icons.refresh),
                     label: const Text('Try again'),
                   ),
@@ -143,7 +143,7 @@ class _HomeState extends State<Home> {
   Widget _buildStateWidgetForTab(BoxConstraints constraints) {
     final stateWidget = _buildMarketStateWidget();
     return RefreshIndicator(
-      onRefresh: getCoinMarket,
+      onRefresh: () => getCoinMarket(force: true),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: ConstrainedBox(
@@ -156,7 +156,7 @@ class _HomeState extends State<Home> {
 
   Widget _buildPortfolioTab() {
     return RefreshIndicator(
-      onRefresh: getCoinMarket,
+      onRefresh: () => getCoinMarket(force: true),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
@@ -553,7 +553,7 @@ class _HomeState extends State<Home> {
     final limitedTop10 = top10Coins.take(10).toList();
 
     return RefreshIndicator(
-      onRefresh: getCoinMarket,
+      onRefresh: () => getCoinMarket(force: true),
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -583,7 +583,7 @@ class _HomeState extends State<Home> {
     final topLosers = sortedByChange.reversed.take(5).toList();
 
     return RefreshIndicator(
-      onRefresh: getCoinMarket,
+      onRefresh: () => getCoinMarket(force: true),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -618,35 +618,18 @@ class _HomeState extends State<Home> {
   List? coinMarket = [];
   List<CoinModel>? coinMarketList;
 
-  Future<void> getCoinMarket() async {
-    const url =
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&sparkline=true';
-
+  Future<void> getCoinMarket({bool force = false}) async {
     setState(() {
       isRefreshing = true;
     });
     try {
-      var response = await http.get(Uri.parse(url), headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      });
+      final coins = await MarketRepository.instance.getMarkets(force: force);
       if (!mounted) return;
       setState(() {
         isRefreshing = false;
+        coinMarketList = coins;
+        coinMarket = coins;
       });
-      if (response.statusCode == 200) {
-        var x = response.body;
-        coinMarketList = coinModelFromJson(x);
-        if (!mounted) return;
-        setState(() {
-          coinMarket = coinMarketList;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() {
-          coinMarket = [];
-        });
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
