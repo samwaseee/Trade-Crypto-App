@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../Model/article.dart';
 import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
+import '../Services/trade_service.dart';
 import '../utils/format.dart';
 
 class SelectCoin extends StatefulWidget {
@@ -58,37 +59,32 @@ class _SelectCoinState extends State<SelectCoin> {
     }
   }
 
-  Future<void> buyCoin(String coinId, double amount, double price) async {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    final transactionsSubcollection = userDoc.collection('transactions');
-
-    try {
-      await transactionsSubcollection.add({
-        'type': 'Buy',
-        'coinId': coinId,
-        'amount': amount,
-        'price': price,
-        'date': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      throw Exception('Failed to record buy transaction.');
+  Future<void> openTrade(String type) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not authenticated')),
+      );
+      return;
     }
-  }
 
-  Future<void> sellCoin(String coinId, double amount, double price) async {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    final transactionsSubcollection = userDoc.collection('transactions');
-
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await transactionsSubcollection.add({
-        'type': 'Sell',
-        'coinId': coinId,
-        'amount': amount,
-        'price': price,
-        'date': DateTime.now().toIso8601String(),
-      });
+      await TradeService().openTrade(
+        userId: user.uid,
+        coinId: widget.selectItem.id,
+        type: type,
+        amount: _amount,
+        price: (widget.selectItem.currentPrice as num).toDouble(),
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text('Successfully opened $type trade for $_amount ${widget.selectItem.id}')),
+      );
     } catch (e) {
-      throw Exception('Failed to record sell transaction.');
+      final message = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error: $message')),
+      );
     }
   }
 
@@ -425,31 +421,7 @@ class _SelectCoinState extends State<SelectCoin> {
                           backgroundColor: Colors.green,
                           minimumSize: const Size.fromHeight(48),
                         ),
-                        onPressed: () async {
-                          final user = FirebaseAuth.instance.currentUser;
-                          if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('User not authenticated')),
-                            );
-                            return;
-                          }
-
-                          final messenger = ScaffoldMessenger.of(context);
-                          try {
-                            await buyCoin(
-                              widget.selectItem.id,
-                              _amount,
-                              widget.selectItem.currentPrice,
-                            );
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('Successfully bought $_amount ${widget.selectItem.id}')),
-                            );
-                          } catch (e) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        },
+                        onPressed: () => openTrade('Buy'),
                         child: const Text('Buy'),
                       ),
                     ),
@@ -489,31 +461,7 @@ class _SelectCoinState extends State<SelectCoin> {
                           backgroundColor: Colors.red,
                           minimumSize: const Size.fromHeight(48),
                         ),
-                        onPressed: () async {
-                          final user = FirebaseAuth.instance.currentUser;
-                          if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('User not authenticated')),
-                            );
-                            return;
-                          }
-
-                          final messenger = ScaffoldMessenger.of(context);
-                          try {
-                            await sellCoin(
-                              widget.selectItem.id,
-                              _amount,
-                              widget.selectItem.currentPrice,
-                            );
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('Successfully sold $_amount ${widget.selectItem.id}')),
-                            );
-                          } catch (e) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        },
+                        onPressed: () => openTrade('Sell'),
                         child: const Text('Sell'),
                       ),
                     ),

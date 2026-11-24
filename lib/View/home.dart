@@ -7,6 +7,7 @@ import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_crypto/Services/trade_service.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
 
@@ -47,33 +48,6 @@ class _HomeState extends State<Home> {
         .collection('users')
         .doc(userId)
         .snapshots();
-  }
-
-  Future<void> closeTrade(
-      String userId, String transactionId, double profit) async {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
-    final transactionDoc =
-        userDoc.collection('transactions').doc(transactionId);
-
-    try {
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentSnapshot userSnapshot = await transaction.get(userDoc);
-        if (!userSnapshot.exists) {
-          throw Exception('User document does not exist.');
-        }
-
-        Map<String, dynamic> userData =
-            userSnapshot.data() as Map<String, dynamic>;
-        double currentWallet = (userData['wallet'] ?? 0).toDouble();
-        double newWallet = currentWallet + profit;
-
-        transaction.update(userDoc, {'wallet': newWallet});
-        transaction.delete(transactionDoc);
-      });
-    } catch (e) {
-      debugPrint('Error in closeTrade: $e');
-      throw Exception('Failed to close trade: $e');
-    }
   }
 
   @override
@@ -414,10 +388,11 @@ class _HomeState extends State<Home> {
 
                                       if (confirm == true) {
                                         try {
-                                          await closeTrade(
-                                              userId,
-                                              transaction['id'],
-                                              roundMoney(profit));
+                                          await TradeService().closeTrade(
+                                            userId: userId,
+                                            transactionId: transaction['id'],
+                                            currentPrice: (coinData.currentPrice as num).toDouble(),
+                                          );
                                           if (!context.mounted) return;
                                           Navigator.pop(context);
                                           ScaffoldMessenger.of(
@@ -428,13 +403,14 @@ class _HomeState extends State<Home> {
                                                     'Trade closed successfully!')),
                                           );
                                         } catch (e) {
+                                          final message = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
                                           if (!context.mounted) return;
                                           ScaffoldMessenger.of(
                                                   context)
                                               .showSnackBar(
                                             SnackBar(
                                                 content: Text(
-                                                    'Failed to close trade: $e')),
+                                                    'Failed to close trade: $message')),
                                           );
                                         }
                                       }

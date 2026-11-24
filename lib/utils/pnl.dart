@@ -1,3 +1,5 @@
+import 'dart:math';
+
 double computePnl({
   required String type,
   required double entryPrice,
@@ -14,3 +16,8 @@ double computePnl({
 }
 
 double roundMoney(double v) => (v * 100).roundToDouble() / 100;
+
+double roundTo(double v, int decimals) {
+  final mod = pow(10, decimals);
+  return (v * mod).roundToDouble() / mod;
+}
