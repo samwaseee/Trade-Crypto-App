@@ -8,6 +8,7 @@ import 'package:my_crypto/View/Components/item2.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_crypto/utils/format.dart';
+import 'package:my_crypto/utils/pnl.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -337,14 +338,21 @@ class _HomeState extends State<Home> {
                       }
                       final coinData = matchingCoins.first;
 
-                      double buyprofit = double.parse(
-                          (coinData.currentPrice -
-                                  transaction['price'])
-                              .toStringAsFixed(2));
-                      double sellprofit = double.parse(
-                          (transaction['price'] -
-                                  coinData.currentPrice)
-                              .toStringAsFixed(2));
+                      final type = transaction['type'];
+                      if (type != 'Buy' && type != 'Sell') {
+                        return const SizedBox.shrink();
+                      }
+
+                      final entryPrice = (transaction['price'] as num?)?.toDouble() ?? 0.0;
+                      final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
+                      final currentPrice = (coinData.currentPrice as num?)?.toDouble() ?? 0.0;
+
+                      final profit = computePnl(
+                        type: type as String,
+                        entryPrice: entryPrice,
+                        currentPrice: currentPrice,
+                        amount: amount,
+                      );
 
                       return InkWell(
                         onTap: () {
@@ -360,10 +368,8 @@ class _HomeState extends State<Home> {
                                     Text('Coin: ${coinData.id}'),
                                     Text('Amount: ${transaction['amount']}'),
                                     Text('Price: \$${transaction['price']}'),
-                                    Text('Type: ${transaction['type']}'),
-                                    transaction['type'] == 'Buy'
-                                        ? Text('Profit: \$$buyprofit')
-                                        : Text('Profit: \$$sellprofit'),
+                                    Text('Type: $type'),
+                                    Text('Profit: ${formatSignedUsd(profit)}'),
                                     Text(
                                         'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
                                     Text('Current Price: \$${coinData.currentPrice}'),
@@ -411,10 +417,7 @@ class _HomeState extends State<Home> {
                                           await closeTrade(
                                               userId,
                                               transaction['id'],
-                                              transaction['type'] ==
-                                                      'Buy'
-                                                  ? buyprofit
-                                                  : sellprofit);
+                                              roundMoney(profit));
                                           if (!context.mounted) return;
                                           Navigator.pop(context);
                                           ScaffoldMessenger.of(

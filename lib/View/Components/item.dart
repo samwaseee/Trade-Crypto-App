@@ -1,6 +1,7 @@
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/utils/format.dart';
+import 'package:my_crypto/utils/pnl.dart';
 
 class Item extends StatelessWidget {
   final dynamic item;
@@ -13,11 +14,21 @@ class Item extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final buyprofit = double.parse((item.currentPrice - transaction['price']).toStringAsFixed(2));
-    final sellprofit = double.parse((transaction['price'] - item.currentPrice).toStringAsFixed(2));
+    final type = transaction['type'];
+    if (type != 'Buy' && type != 'Sell') {
+      return const SizedBox.shrink();
+    }
 
-    final isBuy = transaction['type'] == 'Buy';
-    final profit = isBuy ? buyprofit : sellprofit;
+    final entryPrice = (transaction['price'] as num?)?.toDouble() ?? 0.0;
+    final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
+    final currentPrice = (item.currentPrice as num?)?.toDouble() ?? 0.0;
+
+    final profit = computePnl(
+      type: type as String,
+      entryPrice: entryPrice,
+      currentPrice: currentPrice,
+      amount: amount,
+    );
     final isZero = profit.abs() < 0.005;
     final isPositive = profit >= 0;
 
