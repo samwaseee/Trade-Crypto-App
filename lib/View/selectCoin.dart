@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,6 +38,7 @@ class _SelectCoinState extends State<SelectCoin> {
   List<ChartModel>? _chart;
   bool _chartLoading = true;
   bool _chartError = false;
+  int _chartReq = 0;
   bool _useLineChart = false;
 
   static const _timeLabels = ['1D', '7D', '1M', '3M', '6M', '1Y'];
@@ -116,31 +115,27 @@ class _SelectCoinState extends State<SelectCoin> {
 
   Future<void> _loadChart() async {
     if (!mounted) return;
+    final req = ++_chartReq;
     setState(() {
       _chartLoading = true;
       _chartError = false;
     });
     final days = _timeDays[_timeIdx];
-    final url =
-        'https://api.coingecko.com/api/v3/coins/${_coin.id}/ohlc?vs_currency=usd&days=$days';
     try {
-      final res = await http.get(Uri.parse(url),
-          headers: {'Content-Type': 'application/json'});
-      if (res.statusCode == 200) {
-        final raw = json.decode(res.body) as Iterable;
-        if (mounted) {
-          setState(() {
-            _chart = raw.map((e) => ChartModel.fromJson(e)).toList();
-            _chartError = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _chartError = true);
-      }
+      final data = await MarketRepository.instance.getOhlc(_coin.id, days);
+      if (!mounted || req != _chartReq) return;
+      setState(() {
+        _chart = data;
+        _chartError = false;
+        _chartLoading = false;
+      });
     } catch (_) {
-      if (mounted) setState(() => _chartError = true);
+      if (!mounted || req != _chartReq) return;
+      setState(() {
+        _chartError = true;
+        _chartLoading = false;
+      });
     }
-    if (mounted) setState(() => _chartLoading = false);
   }
 
   List<ChartModel> _buildSparklineFallback() {

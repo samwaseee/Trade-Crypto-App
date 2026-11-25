@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../Model/chartModel.dart';
 import '../Model/coinModel.dart';
 
 sealed class MarketException implements Exception {
@@ -55,6 +56,9 @@ class MarketRepository {
   final Map<String, Future<double>> _inFlightPrices = {};
   int _priceFailures = 0;
   DateTime? _lastPriceAttemptTime;
+
+  final Map<String, ({DateTime at, List<ChartModel> data})> _ohlcCache = {};
+  final Map<String, Future<List<ChartModel>>> _inFlightOhlc = {};
 
   DateTime? get lastUpdated => _lastUpdated;
 
@@ -234,6 +238,70 @@ class MarketRepository {
 
     _priceFailures = min(10, _priceFailures + 1);
     return _getFallbackPrice(coinId);
+  }
+
+  Future<List<ChartModel>> getOhlc(String coinId, int days) {
+    final key = '$coinId|$days';
+
+    final cached = _ohlcCache[key];
+    if (cached != null && DateTime.now().difference(cached.at).inSeconds < 60) {
+      return Future.value(cached.data);
+    }
+
+    if (_inFlightOhlc.containsKey(key)) {
+      return _inFlightOhlc[key]!;
+    }
+
+    final future = _fetchOhlc(key, coinId, days);
+    _inFlightOhlc[key] = future;
+    return future.whenComplete(() {
+      _inFlightOhlc.remove(key);
+    });
+  }
+
+  Future<List<ChartModel>> _fetchOhlc(String key, String coinId, int days) async {
+    final url =
+        'https://api.coingecko.com/api/v3/coins/${Uri.encodeComponent(coinId)}/ohlc?vs_currency=usd&days=$days';
+
+    try {
+      final response = await _client.get(Uri.parse(url), headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      }).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        try {
+          final raw = json.decode(response.body) as List;
+          final data = raw.map((e) => ChartModel.fromJson(e as List)).toList();
+          _ohlcCache[key] = (at: DateTime.now(), data: data);
+          return data;
+        } catch (_) {
+          throw BadData();
+        }
+      } else if (response.statusCode == 429) {
+        throw RateLimited();
+      } else {
+        throw ServerError(response.statusCode);
+      }
+    } catch (e) {
+      MarketException ex;
+      if (e is MarketException) {
+        ex = e;
+      } else if (e is FormatException || e is TypeError) {
+        ex = BadData();
+      } else if (e is IOException || e is http.ClientException || e is TimeoutException) {
+        ex = Offline();
+      } else {
+        debugPrint('_fetchOhlc error: $e');
+        ex = Unexpected();
+      }
+
+      final stale = _ohlcCache[key];
+      if (stale != null) {
+        return stale.data;
+      }
+      throw ex;
+    }
   }
 
   double _getFallbackPrice(String coinId) {

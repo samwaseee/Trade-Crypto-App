@@ -153,4 +153,109 @@ void main() {
       await expectLater(() => repo.getMarkets(force: true), throwsA(isA<Unexpected>()));
     });
   });
+
+  group('MarketRepository getOhlc Tests', () {
+    test('valid OHLC JSON [[1700000000000,1.0,2.0,0.5,1.5]] -> getOhlc returns 1 item', () async {
+      var calls = 0;
+      final mockClient = MockClient((request) async {
+        calls++;
+        return http.Response('[[1700000000000,1.0,2.0,0.5,1.5]]', 200);
+      });
+
+      final repo = MarketRepository(client: mockClient);
+      final ohlc = await repo.getOhlc('bitcoin', 30);
+
+      expect(ohlc.length, equals(1));
+      expect(ohlc[0].time, equals(1700000000000));
+      expect(ohlc[0].open, equals(1.0));
+      expect(ohlc[0].high, equals(2.0));
+      expect(ohlc[0].low, equals(0.5));
+      expect(ohlc[0].close, equals(1.5));
+      expect(calls, equals(1));
+    });
+
+    test('two sequential calls for the same key -> calls == 1', () async {
+      var calls = 0;
+      final mockClient = MockClient((request) async {
+        calls++;
+        return http.Response('[[1700000000000,1.0,2.0,0.5,1.5]]', 200);
+      });
+
+      final repo = MarketRepository(client: mockClient);
+      final ohlc1 = await repo.getOhlc('bitcoin', 30);
+      final ohlc2 = await repo.getOhlc('bitcoin', 30);
+
+      expect(ohlc1.length, equals(1));
+      expect(ohlc2.length, equals(1));
+      expect(calls, equals(1));
+    });
+
+    test('Future.wait of two concurrent calls for the same key -> calls == 1', () async {
+      var calls = 0;
+      final mockClient = MockClient((request) async {
+        calls++;
+        return http.Response('[[1700000000000,1.0,2.0,0.5,1.5]]', 200);
+      });
+
+      final repo = MarketRepository(client: mockClient);
+      final results = await Future.wait([
+        repo.getOhlc('bitcoin', 30),
+        repo.getOhlc('bitcoin', 30),
+      ]);
+
+      expect(results[0].length, equals(1));
+      expect(results[1].length, equals(1));
+      expect(calls, equals(1));
+    });
+
+    test('429 -> RateLimited; 500 -> ServerError; invalid JSON body with 200 -> BadData; ClientException -> Offline', () async {
+      // 429 -> RateLimited
+      {
+        var calls = 0;
+        final mockClient = MockClient((request) async {
+          calls++;
+          return http.Response('Rate Limited', 429);
+        });
+        final repo = MarketRepository(client: mockClient);
+        await expectLater(() => repo.getOhlc('bitcoin', 30), throwsA(isA<RateLimited>()));
+        expect(calls, equals(1));
+      }
+
+      // 500 -> ServerError
+      {
+        var calls = 0;
+        final mockClient = MockClient((request) async {
+          calls++;
+          return http.Response('Server Error', 500);
+        });
+        final repo = MarketRepository(client: mockClient);
+        await expectLater(() => repo.getOhlc('bitcoin', 30), throwsA(isA<ServerError>()));
+        expect(calls, equals(1));
+      }
+
+      // invalid JSON body with 200 -> BadData
+      {
+        var calls = 0;
+        final mockClient = MockClient((request) async {
+          calls++;
+          return http.Response('invalid json body', 200);
+        });
+        final repo = MarketRepository(client: mockClient);
+        await expectLater(() => repo.getOhlc('bitcoin', 30), throwsA(isA<BadData>()));
+        expect(calls, equals(1));
+      }
+
+      // ClientException -> Offline
+      {
+        var calls = 0;
+        final mockClient = MockClient((request) async {
+          calls++;
+          throw http.ClientException('No network');
+        });
+        final repo = MarketRepository(client: mockClient);
+        await expectLater(() => repo.getOhlc('bitcoin', 30), throwsA(isA<Offline>()));
+        expect(calls, equals(1));
+      }
+    });
+  });
 }

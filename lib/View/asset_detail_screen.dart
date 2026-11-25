@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../Model/chartModel.dart';
@@ -44,6 +42,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   List<ChartModel>? _chartData;
   bool _chartLoading = true;
   int _chartReq = 0;
+  String? _chartErrorMessage;
   final List<String> _timeLabels = ['D', 'W', 'M', '3M', '6M', 'Y'];
   final List<int> _timeDays = [1, 7, 30, 90, 180, 365];
   int _selectedTimeIndex = 2; // default: 1M
@@ -106,23 +105,21 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     final reqToken = ++_chartReq;
     setState(() => _chartLoading = true);
     final days = _timeDays[_selectedTimeIndex];
-    final url =
-        'https://api.coingecko.com/api/v3/coins/${widget.coin.id}/ohlc?vs_currency=usd&days=$days';
     try {
-      final response = await http.get(Uri.parse(url), headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+      final data = await MarketRepository.instance.getOhlc(widget.coin.id, days);
+      if (!mounted || reqToken != _chartReq) return;
+      setState(() {
+        _chartData = data;
+        _chartErrorMessage = null;
       });
-      if (reqToken != _chartReq) return;
-      if (response.statusCode == 200) {
-        final raw = json.decode(response.body) as List;
-        if (!mounted) return;
-        setState(() {
-          _chartData = raw.map((e) => ChartModel.fromJson(e)).toList();
-        });
-      }
-    } catch (_) {
-      // silently swallow – UI shows error state
+    } catch (e) {
+      if (!mounted || reqToken != _chartReq) return;
+      setState(() {
+        _chartData = null;
+        _chartErrorMessage = e is MarketException
+            ? e.message
+            : 'Chart unavailable. Try again in a few seconds.';
+      });
     } finally {
       if (mounted && reqToken == _chartReq) setState(() => _chartLoading = false);
     }
@@ -299,6 +296,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                     // ── Candlestick chart with entry-price line ──────────────
                     _ChartCard(
                       chartData: _chartData,
+                      errorMessage: _chartErrorMessage,
                       loading: _chartLoading,
                       entryPrice: _entryPrice,
                       livePrice: _livePrice,
@@ -633,6 +631,7 @@ class _PositionStatsCard extends StatelessWidget {
 // ── Chart card ────────────────────────────────────────────────────────────────
 class _ChartCard extends StatelessWidget {
   final List<ChartModel>? chartData;
+  final String? errorMessage;
   final bool loading;
   final double entryPrice;
   final double livePrice;
@@ -647,6 +646,7 @@ class _ChartCard extends StatelessWidget {
 
   const _ChartCard({
     required this.chartData,
+    this.errorMessage,
     required this.loading,
     required this.entryPrice,
     required this.livePrice,
@@ -723,11 +723,11 @@ class _ChartCard extends StatelessWidget {
   Widget _buildChart() {
     if (loading) return const Center(child: CircularProgressIndicator());
     if (chartData == null || chartData!.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Text(
-            'Chart unavailable — API rate limit reached.\nTry again in a few seconds.',
+            errorMessage ?? 'Chart unavailable — API rate limit reached.\nTry again in a few seconds.',
             textAlign: TextAlign.center,
           ),
         ),
