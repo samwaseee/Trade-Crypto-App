@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../Model/article.dart';
@@ -106,7 +107,7 @@ class _NewsScreenState extends State<NewsScreen> {
                               Text(
                                 'Click to read more...',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.primary,
+                                  color: theme.colorScheme.accent,
                                 ),
                               ),
                             ],

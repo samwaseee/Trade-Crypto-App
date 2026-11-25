@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -29,6 +30,11 @@ class ServerError extends MarketException {
 class BadData extends MarketException {
   @override
   String get message => 'Failed to parse market data. Please try again.';
+}
+
+class Unexpected extends MarketException {
+  @override
+  String get message => 'Something went wrong. Please try again.';
 }
 
 class MarketRepository {
@@ -112,7 +118,7 @@ class MarketRepository {
       final response = await _client.get(Uri.parse(url), headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-      });
+      }).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         try {
@@ -152,7 +158,8 @@ class MarketRepository {
       if (e is MarketException) {
         rethrow;
       }
-      final ex = (e is SocketException || e is http.ClientException) ? Offline() : Offline();
+      debugPrint('_fetchMarketsApi error: $e');
+      final ex = (e is IOException || e is http.ClientException || e is TimeoutException) ? Offline() : Unexpected();
       _lastMarketException = ex;
       _failures = min(10, _failures + 1);
       if (_cachedCoins != null) {
@@ -206,7 +213,7 @@ class MarketRepository {
       final response = await _client.get(Uri.parse(url), headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-      });
+      }).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

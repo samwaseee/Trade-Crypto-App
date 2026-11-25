@@ -157,3 +157,9 @@ class AppTheme {
     );
   }
 }
+
+extension AccentOnSurface on ColorScheme {
+  /// Brand accent that stays legible on the current surface.
+  /// Light mode: primary (unchanged). Dark mode: primaryContainer (same yellow family).
+  Color get accent => brightness == Brightness.dark ? primaryContainer : primary;
+}

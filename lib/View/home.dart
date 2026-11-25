@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 import 'package:my_crypto/Model/coinModel.dart';
 import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
+import 'package:my_crypto/View/asset_detail_screen.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/Services/market_repository.dart';
 import 'package:my_crypto/Services/trade_service.dart';
@@ -320,7 +320,7 @@ class _HomeState extends State<Home> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color: Theme.of(context).colorScheme.accent,
                                 ),
                               ),
                             ],
@@ -441,110 +441,18 @@ class _HomeState extends State<Home> {
                         return const SizedBox.shrink();
                       }
 
-                      final entryPrice = (transaction['price'] as num?)?.toDouble() ?? 0.0;
-                      final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
-                      final currentPrice = (coinData.currentPrice as num?)?.toDouble() ?? 0.0;
-
-                      final profit = computePnl(
-                        type: type as String,
-                        entryPrice: entryPrice,
-                        currentPrice: currentPrice,
-                        amount: amount,
-                      );
+                      // PnL is computed inside AssetDetailScreen
 
                       return InkWell(
                         onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Transaction Details'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Coin: ${coinData.id}'),
-                                    Text('Amount: ${transaction['amount']}'),
-                                    Text('Price: \$${transaction['price']}'),
-                                    Text('Type: ${tradeLabel(type)}'),
-                                    Text('Profit: ${formatSignedUsd(profit)}'),
-                                    Text(
-                                        'Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.parse(transaction['date']))}'),
-                                    Text('Current Price: \$${coinData.currentPrice}'),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: const Text('Close'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      final confirm =
-                                          await showDialog<bool>(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: const Text('Confirm Close Trade'),
-                                            content: const Text(
-                                                'Are you sure you want to close this trade?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(
-                                                        context,
-                                                        false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(
-                                                        context,
-                                                        true),
-                                                child: const Text('Close Trade'),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-
-                                      if (confirm == true) {
-                                        try {
-                                          final freshPrice = await MarketRepository.instance.getFreshPrice(coinData.id);
-                                          await TradeService().closeTrade(
-                                            userId: userId,
-                                            transactionId: transaction['id'],
-                                            currentPrice: freshPrice,
-                                          );
-                                          if (!context.mounted) return;
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger.of(
-                                                  context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                                content: Text(
-                                                    'Trade closed at \$${formatUsd(freshPrice)}')),
-                                          );
-                                        } catch (e) {
-                                          final message = e.toString().replaceFirst(RegExp(r'^(Exception|Invalid argument\(s\)):\s*'), '');
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                                  context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                                content: Text(
-                                                    'Failed to close trade: $message')),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    child: const Text('Close Trade'),
-                                  ),
-                                ],
-                              );
-                            },
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AssetDetailScreen(
+                                coin: coinData,
+                                transaction: transaction,
+                              ),
+                            ),
                           );
                         },
                         child: Item(
@@ -582,7 +490,7 @@ class _HomeState extends State<Home> {
               const SizedBox.shrink()
             else
               SizedBox(
-                height: 170,
+                height: 240,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: coinMarket!.length,

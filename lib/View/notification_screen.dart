@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import '../Model/coinModel.dart';
 import '../Services/market_repository.dart';
 
@@ -144,7 +145,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             ),
                             child: Icon(
                               Icons.notifications_outlined,
-                              color: theme.colorScheme.primary,
+                              color: theme.colorScheme.accent,
                               size: 24,
                             ),
                           ),

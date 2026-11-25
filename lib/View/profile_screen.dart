@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_crypto/View/welcome_screen.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -100,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(
                       Icons.person,
                       size: 64,
-                      color: colorScheme.primary,
+                      color: colorScheme.accent,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -109,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         children: [
-                          Icon(Icons.email_outlined, color: colorScheme.primary),
+                          Icon(Icons.email_outlined, color: colorScheme.accent),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
@@ -149,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             )
                           : Row(
                               children: [
-                                Icon(Icons.perm_identity_sharp, color: colorScheme.primary),
+                                Icon(Icons.perm_identity_sharp, color: colorScheme.accent),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
@@ -190,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             )
                           : Row(
                               children: [
-                                Icon(Icons.phone_outlined, color: colorScheme.primary),
+                                Icon(Icons.phone_outlined, color: colorScheme.accent),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
