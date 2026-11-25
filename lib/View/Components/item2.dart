@@ -108,10 +108,14 @@ class Item2 extends StatelessWidget {
                         ),
                         Row(
                           children: [
-                            Text(
-                              item.symbol.toUpperCase(),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: cs.onSurfaceVariant,
+                            Flexible(
+                              child: Text(
+                                item.symbol.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
                               ),
                             ),
                             if (item.marketCapRank > 0) ...[
@@ -236,26 +240,37 @@ class Item2 extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'L \$${_compact(item.low24H)}',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: tc.loss,
-                            fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        '24h range',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          color: cs.onSurfaceVariant,
+                      Flexible(
+                        child: Text(
+                          'L \$${_compact(item.low24H)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: tc.loss,
+                              fontWeight: FontWeight.w600),
                         ),
                       ),
-                      Text(
-                        'H \$${_compact(item.high24H)}',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: tc.gain,
-                            fontWeight: FontWeight.w600),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Text(
+                          '24h range',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          'H \$${_compact(item.high24H)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: tc.gain,
+                              fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),
