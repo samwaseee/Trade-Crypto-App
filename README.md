@@ -91,7 +91,6 @@ dependencies:
   cloud_firestore: ^5.5.0
   url_launcher: ^6.0.13
   intl: ^0.17.0
-  flutter_dotenv: ^5.0.3
 ```
 
 ### Package Descriptions
@@ -105,7 +104,6 @@ dependencies:
 7. **`cloud_firestore`**: Integrates Cloud Firestore for real-time database functionalities.
 8. **`url_launcher`**: A package to launch URLs in the mobile platform's browser or other applications.
 9. **`intl`**: Supports internationalization and localization, including date, number, and currency formatting.
-10. **`flutter_dotenv`**: Loads environment variables from a `.env` file to securely manage configuration and sensitive information.
 
 ## Getting Started
 
@@ -153,10 +151,11 @@ class MyApp extends StatelessWidget {
    - Download the `google-services.json` file from your Firebase project.
    - Place it in the `android/app` directory of your Flutter project.
 
-5. Run the app:
+5. Set the NewsData API key at runtime and run the app:
    ```bash
-   flutter run
+   flutter run --dart-define=NEWS_API_KEY=your_key
    ```
+   In Android Studio, add `--dart-define=NEWS_API_KEY=your_key` under **Run > Edit Configurations > Additional run args**. Never commit the key.
 
 ## Technologies Used
 
