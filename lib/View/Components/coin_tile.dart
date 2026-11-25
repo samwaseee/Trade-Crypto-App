@@ -1,7 +1,8 @@
 import 'package:chart_sparkline/chart_sparkline.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/Model/coinModel.dart';
 import 'package:my_crypto/View/selectCoin.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 
 class CoinTile extends StatelessWidget {
@@ -14,12 +15,13 @@ class CoinTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final tradingColors = theme.extension<TradingColors>()!;
 
     final isZero = coin.marketCapChangePercentage24H.abs() < 0.005;
     final isPositive = coin.marketCapChangePercentage24H >= 0;
     final changeColor = isZero
         ? colorScheme.onSurfaceVariant
-        : (isPositive ? Colors.green : Colors.red);
+        : (isPositive ? tradingColors.gain : tradingColors.loss);
     final changeBgColor = isZero
         ? colorScheme.surfaceContainerHighest
         : changeColor.withValues(alpha: 0.12);
@@ -29,9 +31,9 @@ class CoinTile extends StatelessWidget {
     if (sparklinePrices.length < 2) {
       sparklineColor = colorScheme.onSurfaceVariant;
     } else if (sparklinePrices.last >= sparklinePrices.first) {
-      sparklineColor = Colors.green;
+      sparklineColor = tradingColors.gain;
     } else {
-      sparklineColor = Colors.red;
+      sparklineColor = tradingColors.loss;
     }
 
     return Card(

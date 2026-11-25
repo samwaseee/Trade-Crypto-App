@@ -1,6 +1,7 @@
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/View/selectCoin.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 
 class Item2 extends StatelessWidget {
@@ -10,17 +11,18 @@ class Item2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tradingColors = theme.extension<TradingColors>()!;
     final isPositive = item.marketCapChangePercentage24H >= 0;
-    final changeColor = isPositive ? Colors.green : Colors.red;
+    final changeColor = isPositive ? tradingColors.gain : tradingColors.loss;
 
     final sparklinePrices = (item.sparklineIn7D?.price as List<num>?)?.map((e) => e.toDouble()).toList() ?? [];
     final Color sparklineColor;
     if (sparklinePrices.length < 2) {
       sparklineColor = changeColor;
     } else if (sparklinePrices.last >= sparklinePrices.first) {
-      sparklineColor = Colors.green;
+      sparklineColor = tradingColors.gain;
     } else {
-      sparklineColor = Colors.red;
+      sparklineColor = tradingColors.loss;
     }
 
     return GestureDetector(

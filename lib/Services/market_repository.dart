@@ -1,17 +1,48 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../Model/coinModel.dart';
 
+sealed class MarketException implements Exception {
+  String get message;
+}
+
+class RateLimited extends MarketException {
+  @override
+  String get message => 'Market data rate limited. Please try again in a minute.';
+}
+
+class Offline extends MarketException {
+  @override
+  String get message => 'No internet connection. Please check your network.';
+}
+
+class ServerError extends MarketException {
+  final int statusCode;
+  ServerError(this.statusCode);
+  @override
+  String get message => 'Server error ($statusCode). Please try again later.';
+}
+
+class BadData extends MarketException {
+  @override
+  String get message => 'Failed to parse market data. Please try again.';
+}
+
 class MarketRepository {
-  MarketRepository._internal();
-  static final MarketRepository instance = MarketRepository._internal();
+  final http.Client _client;
+  MarketRepository({http.Client? client}) : _client = client ?? http.Client();
+
+  static final MarketRepository instance = MarketRepository();
 
   List<CoinModel>? _cachedCoins;
   DateTime? _lastUpdated;
   Future<List<CoinModel>>? _inFlightFuture;
   DateTime? _lastAttemptTime;
   int _failures = 0;
+  MarketException? _lastMarketException;
 
   final Map<String, double> _priceCache = {};
   final Map<String, DateTime> _priceCacheTime = {};
@@ -49,7 +80,7 @@ class MarketRepository {
         if (_cachedCoins != null) {
           return _cachedCoins!;
         }
-        throw Exception('Market data unavailable (rate limited). Please try again in a minute.');
+        throw _lastMarketException ?? RateLimited();
       }
     }
 
@@ -59,7 +90,7 @@ class MarketRepository {
         if (_cachedCoins != null) {
           return _cachedCoins!;
         }
-        throw Exception('Market data unavailable (rate limited). Please try again in a minute.');
+        throw RateLimited();
       }
     }
 
@@ -78,30 +109,56 @@ class MarketRepository {
     const url = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&sparkline=true';
 
     try {
-      final response = await http.get(Uri.parse(url), headers: {
+      final response = await _client.get(Uri.parse(url), headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
       });
 
       if (response.statusCode == 200) {
-        final coins = coinModelFromJson(response.body);
-        _cachedCoins = coins;
-        _lastUpdated = DateTime.now();
-        _failures = 0;
-        return coins;
-      } else {
+        try {
+          final coins = coinModelFromJson(response.body);
+          _cachedCoins = coins;
+          _lastUpdated = DateTime.now();
+          _failures = 0;
+          _lastMarketException = null;
+          return coins;
+        } catch (e) {
+          final ex = BadData();
+          _lastMarketException = ex;
+          _failures = min(10, _failures + 1);
+          if (_cachedCoins != null) {
+            return _cachedCoins!;
+          }
+          throw ex;
+        }
+      } else if (response.statusCode == 429) {
+        final ex = RateLimited();
+        _lastMarketException = ex;
         _failures = min(10, _failures + 1);
         if (_cachedCoins != null) {
           return _cachedCoins!;
         }
-        throw Exception('Market data unavailable (rate limited). Please try again in a minute.');
+        throw ex;
+      } else {
+        final ex = ServerError(response.statusCode);
+        _lastMarketException = ex;
+        _failures = min(10, _failures + 1);
+        if (_cachedCoins != null) {
+          return _cachedCoins!;
+        }
+        throw ex;
       }
     } catch (e) {
+      if (e is MarketException) {
+        rethrow;
+      }
+      final ex = (e is SocketException || e is http.ClientException) ? Offline() : Offline();
+      _lastMarketException = ex;
       _failures = min(10, _failures + 1);
       if (_cachedCoins != null) {
         return _cachedCoins!;
       }
-      throw Exception('Market data unavailable (rate limited). Please try again in a minute.');
+      throw ex;
     }
   }
 
@@ -146,7 +203,7 @@ class MarketRepository {
     final url = 'https://api.coingecko.com/api/v3/simple/price?ids=${Uri.encodeQueryComponent(coinId)}&vs_currencies=usd';
 
     try {
-      final response = await http.get(Uri.parse(url), headers: {
+      final response = await _client.get(Uri.parse(url), headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
       });
@@ -164,7 +221,9 @@ class MarketRepository {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('_fetchFreshPriceApi error: $e');
+    }
 
     _priceFailures = min(10, _priceFailures + 1);
     return _getFallbackPrice(coinId);

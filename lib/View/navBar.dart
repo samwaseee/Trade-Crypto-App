@@ -27,36 +27,70 @@ class _NavBarState extends State<NavBar> {
           _visited[3] ? const ProfileScreen() : const SizedBox.shrink(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (value) {
-          setState(() {
-            _currentIndex = value;
-            _visited[value] = true;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.newspaper_outlined),
-            selectedIcon: Icon(Icons.newspaper),
-            label: 'News',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
-            label: 'Notifications',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _DemoStrip(),
+          NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (value) {
+              setState(() {
+                _currentIndex = value;
+                _visited[value] = true;
+              });
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.newspaper_outlined),
+                selectedIcon: Icon(Icons.newspaper),
+                label: 'News',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.notifications_outlined),
+                selectedIcon: Icon(Icons.notifications),
+                label: 'Notifications',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DemoStrip extends StatelessWidget {
+  const _DemoStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      color: colorScheme.tertiaryContainer,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Center(
+        child: Semantics(
+          label: 'DEMO MODE · Virtual money only, no real trades',
+          child: Text(
+            'DEMO MODE · Virtual money only, no real trades',
+            style: textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onTertiaryContainer,
+            ),
+          ),
+        ),
       ),
     );
   }

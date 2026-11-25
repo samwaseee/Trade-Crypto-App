@@ -4,8 +4,6 @@ import 'package:my_crypto/View/splash_screen.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:material_ui/material_ui.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -21,8 +19,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      themeMode: ThemeMode.light,
-      home: SplashScreen(),
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+      home: const SplashScreen(),
     );
   }
 }

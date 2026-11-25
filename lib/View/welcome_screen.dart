@@ -70,6 +70,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
@@ -89,10 +91,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Learn more about cryptocurrency,\nlook to the future in Trade Crypto',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 32),
               TextField(
@@ -123,13 +125,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               const SizedBox(height: 16),
               Row(
-                children: const [
-                  Expanded(child: Divider()),
+                children: [
+                  const Expanded(child: Divider()),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('or', style: TextStyle(color: Colors.grey)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('or', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                   ),
-                  Expanded(child: Divider()),
+                  const Expanded(child: Divider()),
                 ],
               ),
               const SizedBox(height: 16),

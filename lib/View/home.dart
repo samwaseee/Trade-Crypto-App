@@ -10,6 +10,7 @@ import 'package:my_crypto/View/Components/item2.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/Services/market_repository.dart';
 import 'package:my_crypto/Services/trade_service.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
 
@@ -35,12 +36,14 @@ class _HomeState extends State<Home> {
   late final Stream<DocumentSnapshot> _walletStream;
   late final Stream<List<Map<String, dynamic>>> _transactionsStream;
   late final Stream<PortfolioData> _portfolioStream;
+  late final Stream<List<Map<String, dynamic>>> _assetsStream;
 
   @override
   void initState() {
     _walletStream = fetchWalletStream(userId);
     _transactionsStream = fetchUserTransactions(userId);
     _portfolioStream = _combinePortfolioStreams(_walletStream, _transactionsStream);
+    _assetsStream = fetchUserTransactions(userId);
     getCoinMarket();
     super.initState();
   }
@@ -176,12 +179,16 @@ class _HomeState extends State<Home> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
+                  Icon(
+                    Icons.cloud_off,
+                    size: 48,
+                    color: Theme.of(context).extension<TradingColors>()!.warning,
+                  ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Market data couldn\'t be loaded (Free API rate limited). Please try again.',
+                  Text(
+                    _marketError?.message ?? 'Market data couldn\'t be loaded. Please try again.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
@@ -365,12 +372,16 @@ class _HomeState extends State<Home> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
+                      Icon(
+                        Icons.cloud_off,
+                        size: 48,
+                        color: Theme.of(context).extension<TradingColors>()!.warning,
+                      ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Market data couldn\'t be loaded (Free API rate limited). Please try again.',
+                      Text(
+                        _marketError?.message ?? 'Market data couldn\'t be loaded. Please try again.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       const SizedBox(height: 16),
                       FilledButton.icon(
@@ -384,7 +395,7 @@ class _HomeState extends State<Home> {
               )
             else
               StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _transactionsStream,
+                stream: _assetsStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState ==
                       ConnectionState.waiting) {
@@ -667,6 +678,7 @@ class _HomeState extends State<Home> {
 
   List? coinMarket = [];
   List<CoinModel>? coinMarketList;
+  MarketException? _marketError;
 
   Future<void> getCoinMarket({bool force = false}) async {
     setState(() {
@@ -679,6 +691,7 @@ class _HomeState extends State<Home> {
         isRefreshing = false;
         coinMarketList = coins;
         coinMarket = coins;
+        _marketError = null;
       });
       if (mounted && userId.isNotEmpty && coinMarket != null && coinMarket!.isNotEmpty) {
         _checkLiquidations();
@@ -688,6 +701,7 @@ class _HomeState extends State<Home> {
       setState(() {
         isRefreshing = false;
         coinMarket = [];
+        _marketError = e is MarketException ? e : BadData();
       });
     }
   }

@@ -13,7 +13,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     Timer(
-      const Duration(seconds: 4),
+      const Duration(milliseconds: 1500),
       () {
         if (!mounted) return;
         Navigator.pushReplacement(

@@ -11,6 +11,7 @@ import '../Model/chartModel.dart';
 import '../Services/news_service.dart';
 import '../Services/market_repository.dart';
 import '../Services/trade_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
 
@@ -139,9 +140,10 @@ class _SelectCoinState extends State<SelectCoin> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final tradingColors = theme.extension<TradingColors>()!;
 
     final isPositive = widget.selectItem.marketCapChangePercentage24H >= 0;
-    final changeColor = isPositive ? Colors.green : Colors.red;
+    final changeColor = isPositive ? tradingColors.gain : tradingColors.loss;
 
     return Scaffold(
       appBar: AppBar(
@@ -320,8 +322,8 @@ class _SelectCoinState extends State<SelectCoin> {
                                         CandleSeries<ChartModel, DateTime>(
                                           enableSolidCandles: true,
                                           enableTooltip: true,
-                                          bullColor: Colors.green,
-                                          bearColor: Colors.red,
+                                          bullColor: tradingColors.gain,
+                                          bearColor: tradingColors.loss,
                                           dataSource: itemChart!,
                                           xValueMapper: (ChartModel sales, _) =>
                                               DateTime.fromMillisecondsSinceEpoch(sales.time),
@@ -450,7 +452,8 @@ class _SelectCoinState extends State<SelectCoin> {
                           flex: 2,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: tradingColors.gain,
+                              foregroundColor: tradingColors.onGain,
                               minimumSize: const Size.fromHeight(48),
                             ),
                             onPressed: (_amountInvalid || _submitting) ? null : () => openTrade('Buy'),
@@ -502,7 +505,8 @@ class _SelectCoinState extends State<SelectCoin> {
                           flex: 2,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: Colors.red,
+                              backgroundColor: tradingColors.loss,
+                              foregroundColor: tradingColors.onLoss,
                               minimumSize: const Size.fromHeight(48),
                             ),
                             onPressed: (_amountInvalid || _submitting) ? null : () => openTrade('Sell'),

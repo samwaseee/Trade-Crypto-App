@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
 
@@ -12,6 +13,7 @@ class Item extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final tradingColors = theme.extension<TradingColors>()!;
 
     final type = transaction['type'];
     if (type != 'Buy' && type != 'Sell') {
@@ -38,7 +40,7 @@ class Item extends StatelessWidget {
 
     final profitColor = isZero
         ? colorScheme.onSurfaceVariant
-        : (isPositive ? Colors.green : Colors.red);
+        : (isPositive ? tradingColors.gain : tradingColors.loss);
     final profitBgColor = isZero
         ? colorScheme.surfaceContainerHighest
         : profitColor.withValues(alpha: 0.12);
