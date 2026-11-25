@@ -45,7 +45,7 @@ dependencies:
   intl: ^0.20.3
   flutter_dotenv: ^6.0.2
 
-  material_ui: any
+  material_ui: ^1.11.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -57,6 +57,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -100,3 +101,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#FFE08E"
+  color_dark: "#FFE08E"
+  android_12:
+    color: "#FFE08E"
+    color_dark: "#FFE08E"
+    image: assets/splash/blank.png
+    image_dark: assets/splash/blank.png
+    icon_background_color: "#FFE08E"
+    icon_background_color_dark: "#FFE08E"
