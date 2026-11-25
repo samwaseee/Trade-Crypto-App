@@ -61,7 +61,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const WelcomeScreen()));
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (_) => false,
+    );
   }
 
   @override

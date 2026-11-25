@@ -1,9 +1,9 @@
-import 'package:material_ui/material_ui.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/Model/coinModel.dart';
+import 'package:my_crypto/Services/market_repository.dart';
+import 'package:my_crypto/Services/portfolio_repository.dart';
 import 'package:my_crypto/theme/app_theme.dart';
-import '../Model/coinModel.dart';
-import '../Services/market_repository.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -13,14 +13,20 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  late final String userId;
   Future<List<CoinModel>>? coinMarketFuture;
-  late final Stream<List<Map<String, dynamic>>> _transactionsStream;
+  late final Stream<List<PortfolioTransaction>> _transactionsStream;
 
   @override
   void initState() {
     super.initState();
-    _transactionsStream = fetchUserTransactions(userId);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('NotificationScreen requires an authenticated user.');
+    }
+    userId = uid;
+    _transactionsStream =
+        PortfolioRepository.instance.transactionsStream(userId);
     coinMarketFuture = getCoinMarket();
   }
 
@@ -28,52 +34,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return MarketRepository.instance.getMarkets();
   }
 
-  Stream<List<Map<String, dynamic>>> fetchUserTransactions(String userId) {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('transactions')
-        .snapshots()
-        .map((querySnapshot) {
-      final data = querySnapshot.docs.map((doc) {
-        final transactionData = {
-          'id': doc.id,
-          ...doc.data(),
-        };
-        return transactionData;
-      }).toList();
-
-      return data;
-    });
-  }
-
   List<String> checkNotifications(
-      List<Map<String, dynamic>> transactions, List<CoinModel> coinMarket) {
-    List<String> notifications = [];
+    List<PortfolioTransaction> transactions,
+    List<CoinModel> coinMarket,
+  ) {
+    final notifications = <String>[];
+    final seenCoinIds = <String>{};
+    final coinsById = {for (final coin in coinMarket) coin.id: coin};
 
-    for (var transaction in transactions) {
-      String coinId = transaction['coinId'];
+    for (final transaction in transactions) {
+      final coinId = transaction.coinId;
+      if (!seenCoinIds.add(coinId)) continue;
 
-      final coinData = coinMarket.firstWhere((coin) => coin.id == coinId,
-          orElse: () => CoinModel(
-                id: coinId,
-                symbol: coinId,
-                name: coinId,
-                image: '',
-                currentPrice: 0,
-                marketCapRank: 0,
-                totalVolume: 0,
-                high24H: 0,
-                low24H: 0,
-                priceChange24H: 0,
-                marketCapChangePercentage24H: 0,
-                sparklineIn7D: SparklineIn7D(price: []),
-              ));
-      double marketCapChange = coinData.marketCapChangePercentage24H;
+      final coin = coinsById[coinId];
+      if (coin == null) continue;
+      final priceChange = coin.priceChangePercentage24h;
 
-      if (marketCapChange.abs() > 5) {
+      if (priceChange.abs() > 5) {
         notifications.add(
-            '${coinId.toUpperCase()} market has changed by ${marketCapChange.toStringAsFixed(2)}% in the last 24 hours.');
+          '${coinId.toUpperCase()} market has changed by ${priceChange.toStringAsFixed(2)}% in the last 24 hours.',
+        );
       }
     }
 
@@ -88,7 +68,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       appBar: AppBar(
         title: const Text('Recent Trade Changes'),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
+      body: StreamBuilder<List<PortfolioTransaction>>(
         stream: _transactionsStream,
         builder: (context, transactionSnapshot) {
           if (transactionSnapshot.connectionState == ConnectionState.waiting) {

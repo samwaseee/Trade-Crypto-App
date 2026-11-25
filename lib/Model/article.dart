@@ -1,4 +1,3 @@
-
 class Article {
   final String? title;
   final String? link;
@@ -25,8 +24,10 @@ class NewsResponse {
   NewsResponse({required this.articles});
 
   factory NewsResponse.fromJson(Map<String, dynamic> json) {
-    var list = json['results'] as List;
-    List<Article> articlesList = list.map((i) => Article.fromJson(i)).toList();
+    final list = json['results'] as List;
+    final articlesList = list
+        .map((item) => Article.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
     return NewsResponse(articles: articlesList);
   }
 }

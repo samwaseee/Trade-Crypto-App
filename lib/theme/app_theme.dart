@@ -24,12 +24,13 @@ class TradingColors extends ThemeExtension<TradingColors> {
     warning: Color(0xFFEF6C00),
   );
 
+  // These tones meet WCAG AA contrast for normal text on the dark surface (#121212).
   static const dark = TradingColors(
-    gain: Color(0xFF43A047),
-    onGain: Colors.black87,
-    loss: Color(0xFFE53935),
-    onLoss: Colors.white,
-    warning: Color(0xFFEF6C00),
+    gain: Color(0xFF81C784),
+    onGain: Color(0xFF102014),
+    loss: Color(0xFFEF9A9A),
+    onLoss: Color(0xFF410000),
+    warning: Color(0xFFFFCC80),
   );
 
   @override
