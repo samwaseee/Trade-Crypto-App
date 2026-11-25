@@ -1,6 +1,9 @@
 import 'dart:async';
-import 'package:my_crypto/View/welcome_screen.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:my_crypto/View/navBar.dart';
+import 'package:my_crypto/View/welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,17 +13,58 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  static const _minimumSplashDuration = Duration(milliseconds: 600);
+  static const _authTimeoutDuration = Duration(seconds: 4);
+  late final DateTime _startedAt;
+  StreamSubscription<User?>? _authSubscription;
+  Timer? _authTimeoutTimer;
+  bool _navigationStarted = false;
+
   @override
   void initState() {
-    Timer(
-      const Duration(milliseconds: 1500),
-      () {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => const WelcomeScreen()));
-      },
-    );
     super.initState();
+    _startedAt = DateTime.now();
+    _authTimeoutTimer = Timer(
+      _authTimeoutDuration,
+      () => _finishSplash(null),
+    );
+
+    try {
+      _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+            _onAuthStateChanged,
+            onError: (_) => _finishSplash(null),
+          );
+    } catch (_) {
+      _finishSplash(null);
+    }
+  }
+
+  Future<void> _onAuthStateChanged(User? user) => _finishSplash(user);
+
+  Future<void> _finishSplash(User? user) async {
+    if (_navigationStarted) return;
+    _navigationStarted = true;
+    _authTimeoutTimer?.cancel();
+    await _authSubscription?.cancel();
+
+    final elapsed = DateTime.now().difference(_startedAt);
+    final remaining = _minimumSplashDuration - elapsed;
+    if (remaining > Duration.zero) await Future<void>.delayed(remaining);
+    if (!mounted) return;
+
+    final destination = user == null ? const WelcomeScreen() : const NavBar();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => destination),
+      (_) => false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _authTimeoutTimer?.cancel();
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override
