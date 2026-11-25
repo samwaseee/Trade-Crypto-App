@@ -250,12 +250,19 @@ class _SelectCoinState extends State<SelectCoin> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  String _fmtAmount(double v) {
+    var s = v.toStringAsFixed(8);
+    s = s.replaceFirst(RegExp(r'0+$'), '');
+    s = s.replaceFirst(RegExp(r'\.$'), '');
+    return s.isEmpty ? '0' : s;
+  }
+
   void _increaseAmount() {
     setState(() {
       _amountInvalid = false;
       final step = _coin.currentPrice > 1000 ? 0.01 : 1.0;
       _amount = roundTo((_amount + step).clamp(0.00000001, 1000000.0), 8);
-      _amountCtrl.text = _amount.toStringAsFixed(2);
+      _amountCtrl.text = _fmtAmount(_amount);
     });
   }
 
@@ -264,18 +271,18 @@ class _SelectCoinState extends State<SelectCoin> {
       _amountInvalid = false;
       final step = _coin.currentPrice > 1000 ? 0.01 : 1.0;
       _amount = roundTo((_amount - step).clamp(0.00000001, 1000000.0), 8);
-      _amountCtrl.text = _amount.toStringAsFixed(2);
+      _amountCtrl.text = _fmtAmount(_amount);
     });
   }
 
   void _setPercentageAmount(double fraction, double availableWallet) {
     if (_livePrice <= 0 || availableWallet <= 0) return;
-    final maxCost = availableWallet * fraction;
-    final calcAmount = roundTo(maxCost / _livePrice, 6);
+    final f = fraction >= 1.0 ? 0.995 : fraction;
+    final maxCost = availableWallet * f;
+    final calcAmount = (maxCost / _livePrice * 1000000).floorToDouble() / 1000000;
     setState(() {
       _amount = calcAmount.clamp(0.000001, 1000000.0);
-      _amountCtrl.text = _amount.toStringAsFixed(
-          _coin.currentPrice > 100 ? 2 : 4);
+      _amountCtrl.text = _fmtAmount(_amount);
       _amountInvalid = false;
     });
     HapticFeedback.selectionClick();
@@ -283,11 +290,10 @@ class _SelectCoinState extends State<SelectCoin> {
 
   void _setUsdAmount(double usdVal) {
     if (_livePrice <= 0) return;
-    final calcAmount = roundTo(usdVal / _livePrice, 6);
+    final calcAmount = (usdVal / _livePrice * 1000000).floorToDouble() / 1000000;
     setState(() {
       _amount = calcAmount.clamp(0.000001, 1000000.0);
-      _amountCtrl.text = _amount.toStringAsFixed(
-          _coin.currentPrice > 100 ? 2 : 4);
+      _amountCtrl.text = _fmtAmount(_amount);
       _amountInvalid = false;
     });
     HapticFeedback.selectionClick();
@@ -379,10 +385,11 @@ class _SelectCoinState extends State<SelectCoin> {
       body: StreamBuilder<DocumentSnapshot>(
         stream: _userDocStream,
         builder: (context, userSnap) {
-          final userData = userSnap.data?.data() as Map<String, dynamic>?;
-          final availableWallet = (userData?['wallet'] ?? 0.0) is num
-              ? (userData!['wallet'] as num).toDouble()
-              : 0.0;
+          final userData = (userSnap.hasData && userSnap.data != null && userSnap.data!.exists)
+              ? userSnap.data!.data() as Map<String, dynamic>?
+              : null;
+          final rawWallet = userData?['wallet'];
+          final availableWallet = (rawWallet is num) ? rawWallet.toDouble() : 0.0;
 
           final cost = _amount * _livePrice;
 
@@ -392,7 +399,7 @@ class _SelectCoinState extends State<SelectCoin> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _handlePullToRefresh,
-                    color: cs.primary,
+                    color: cs.accent,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: Column(
@@ -411,10 +418,10 @@ class _SelectCoinState extends State<SelectCoin> {
                             StreamBuilder<QuerySnapshot>(
                               stream: _transactionsStream,
                               builder: (context, txSnap) {
-                                if (!txSnap.hasData) return const SizedBox();
+                                if (!txSnap.hasData || txSnap.data == null) return const SizedBox();
                                 final docs = txSnap.data!.docs.where((d) {
-                                  final data = d.data() as Map<String, dynamic>;
-                                  return data['coinId'] == _coin.id;
+                                  final data = d.data() as Map<String, dynamic>?;
+                                  return data != null && data['coinId'] == _coin.id;
                                 }).toList();
 
                                 if (docs.isEmpty) return const SizedBox();
@@ -498,7 +505,7 @@ class _SelectCoinState extends State<SelectCoin> {
                       _amountInvalid = parsed == null ||
                           parsed <= 0 ||
                           parsed > 1000000.0;
-                      if (!_amountInvalid) _amount = roundTo(parsed!, 8);
+                      if (!_amountInvalid && parsed != null) _amount = roundTo(parsed, 8);
                     });
                   },
                   onBuy: () => _openTrade('Buy', availableWallet),
@@ -661,7 +668,7 @@ class _ActivePositionsSection extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.account_balance_wallet_rounded,
-                  size: 18, color: cs.primary),
+                  size: 18, color: cs.accent),
               const SizedBox(width: 8),
               Text(
                 'Your Active Position (${docs.length})',
@@ -837,7 +844,7 @@ class _ChartSection extends StatelessWidget {
                           ? Icons.candlestick_chart_rounded
                           : Icons.show_chart_rounded,
                       size: 20,
-                      color: cs.primary,
+                      color: cs.accent,
                     ),
                     tooltip: useLineChart
                         ? 'Switch to Candles'
@@ -1068,7 +1075,7 @@ class _StatsGrid extends StatelessWidget {
                 label: '24h Volume',
                 value: _compact(vol),
                 icon: Icons.bar_chart_rounded,
-                iconColor: cs.primary,
+                iconColor: cs.accent,
                 theme: theme,
               ),
               const SizedBox(width: 10),
@@ -1298,7 +1305,7 @@ class _NewsSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.newspaper_rounded, size: 20, color: cs.primary),
+              Icon(Icons.newspaper_rounded, size: 20, color: cs.accent),
               const SizedBox(width: 8),
               Text(
                 'Related Market News',
@@ -1425,11 +1432,11 @@ class _NewsCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.open_in_new_rounded,
-                          size: 12, color: cs.primary),
+                          size: 12, color: cs.accent),
                       const SizedBox(width: 4),
                       Text('Read full story',
                           style: theme.textTheme.labelSmall
-                              ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                              ?.copyWith(color: cs.accent, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],

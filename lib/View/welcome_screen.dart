@@ -82,7 +82,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             children: [
               SizedBox(
                 height: 220,
-                child: Image.asset('assets/image/1.gif'),
+                child: Image.asset('assets/image/welcome_coin.webp'),
               ),
               const SizedBox(height: 24),
               const Text(

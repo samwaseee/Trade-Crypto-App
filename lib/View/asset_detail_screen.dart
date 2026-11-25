@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -14,6 +15,9 @@ import '../Services/trade_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
+
+const _liveLineColor = Colors.blue;
+const _entryLineColor = Color(0xFFFFB300);
 
 // ---------------------------------------------------------------------------
 // Entry point – pass the coin + the user's open transaction for that coin
@@ -39,6 +43,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   // ── chart state ────────────────────────────────────────────────────────────
   List<ChartModel>? _chartData;
   bool _chartLoading = true;
+  int _chartReq = 0;
   final List<String> _timeLabels = ['D', 'W', 'M', '3M', '6M', 'Y'];
   final List<int> _timeDays = [1, 7, 30, 90, 180, 365];
   int _selectedTimeIndex = 2; // default: 1M
@@ -51,6 +56,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   /// and poll a fresh price to keep PnL live.
   double _livePrice = 0;
   bool _closingTrade = false;
+  Timer? _priceTimer;
 
   // ── derived from transaction ───────────────────────────────────────────────
   late final String _txId;
@@ -82,13 +88,22 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       zoomMode: ZoomMode.x,
     );
 
+    _priceTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshLivePrice());
+
     _loadChart();
     _refreshLivePrice();
+  }
+
+  @override
+  void dispose() {
+    _priceTimer?.cancel();
+    super.dispose();
   }
 
   // ── data ───────────────────────────────────────────────────────────────────
 
   Future<void> _loadChart() async {
+    final reqToken = ++_chartReq;
     setState(() => _chartLoading = true);
     final days = _timeDays[_selectedTimeIndex];
     final url =
@@ -98,8 +113,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       });
+      if (reqToken != _chartReq) return;
       if (response.statusCode == 200) {
         final raw = json.decode(response.body) as List;
+        if (!mounted) return;
         setState(() {
           _chartData = raw.map((e) => ChartModel.fromJson(e)).toList();
         });
@@ -107,7 +124,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     } catch (_) {
       // silently swallow – UI shows error state
     } finally {
-      if (mounted) setState(() => _chartLoading = false);
+      if (mounted && reqToken == _chartReq) setState(() => _chartLoading = false);
     }
   }
 
@@ -685,12 +702,12 @@ class _ChartCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  _legendDot(const Color(0xFFFFB300)),
+                  _legendDot(_entryLineColor),
                   const SizedBox(width: 4),
                   Text('Entry \$${formatUsd(entryPrice)}',
                       style: theme.textTheme.bodySmall),
                   const SizedBox(width: 16),
-                  _legendDot(theme.colorScheme.primary),
+                  _legendDot(_liveLineColor),
                   const SizedBox(width: 4),
                   Text('Live \$${formatUsd(livePrice)}',
                       style: theme.textTheme.bodySmall),
@@ -753,7 +770,7 @@ class _ChartCard extends StatelessWidget {
           dataSource: [chartData!.first, chartData!.last],
           xValueMapper: (c, _) => DateTime.fromMillisecondsSinceEpoch(c.time),
           yValueMapper: (_, __) => entryPrice,
-          color: const Color(0xFFFFB300), // amber
+          color: _entryLineColor,
           width: 1.6,
           dashArray: const <double>[6, 4],
           enableTooltip: false,
@@ -765,7 +782,7 @@ class _ChartCard extends StatelessWidget {
           dataSource: [chartData!.first, chartData!.last],
           xValueMapper: (c, _) => DateTime.fromMillisecondsSinceEpoch(c.time),
           yValueMapper: (_, __) => livePrice,
-          color: Colors.blue,
+          color: _liveLineColor,
           width: 1.4,
           dashArray: const <double>[4, 4],
           enableTooltip: false,
