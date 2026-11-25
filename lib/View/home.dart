@@ -1,25 +1,19 @@
-import 'dart:async';
 import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/Model/coinModel.dart';
+import 'package:my_crypto/Services/market_repository.dart';
+import 'package:my_crypto/Services/portfolio_repository.dart';
+import 'package:my_crypto/Services/trade_service.dart';
 import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
+import 'package:my_crypto/View/Components/state_widgets.dart';
 import 'package:my_crypto/View/asset_detail_screen.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:my_crypto/Services/market_repository.dart';
-import 'package:my_crypto/Services/trade_service.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
-
-class PortfolioData {
-  final DocumentSnapshot walletDoc;
-  final List<Map<String, dynamic>> transactions;
-
-  PortfolioData(this.walletDoc, this.transactions);
-}
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -29,88 +23,34 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final PortfolioRepository _portfolioRepository = PortfolioRepository.instance;
+  late final String userId;
   bool isRefreshing = true;
-  List? userTransactions = [];
-
-  late final Stream<DocumentSnapshot> _walletStream;
-  late final Stream<List<Map<String, dynamic>>> _transactionsStream;
-  late final Stream<PortfolioData> _portfolioStream;
-  late final Stream<List<Map<String, dynamic>>> _assetsStream;
+  late Stream<PortfolioSnapshot> _portfolioStream;
+  final ValueNotifier<Map<String, double>> _currentPrices = ValueNotifier({});
 
   @override
   void initState() {
-    _walletStream = fetchWalletStream(userId);
-    _transactionsStream = fetchUserTransactions(userId);
-    _portfolioStream = _combinePortfolioStreams(_walletStream, _transactionsStream);
-    _assetsStream = fetchUserTransactions(userId);
-    getCoinMarket();
     super.initState();
-  }
-
-  Stream<PortfolioData> _combinePortfolioStreams(
-    Stream<DocumentSnapshot> walletStream,
-    Stream<List<Map<String, dynamic>>> txStream,
-  ) {
-    late StreamController<PortfolioData> controller;
-    DocumentSnapshot? lastWallet;
-    List<Map<String, dynamic>>? lastTx;
-    StreamSubscription? walletSub;
-    StreamSubscription? txSub;
-
-    void update() {
-      if (lastWallet != null && lastTx != null && !controller.isClosed) {
-        controller.add(PortfolioData(lastWallet!, lastTx!));
-      }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Home requires an authenticated user.');
     }
-
-    controller = StreamController<PortfolioData>.broadcast(
-      onListen: () {
-        walletSub = walletStream.listen(
-          (wallet) {
-            lastWallet = wallet;
-            update();
-          },
-          onError: controller.addError,
-        );
-        txSub = txStream.listen(
-          (tx) {
-            lastTx = tx;
-            update();
-          },
-          onError: controller.addError,
-        );
-      },
-      onCancel: () {
-        walletSub?.cancel();
-        txSub?.cancel();
-        lastWallet = null;
-        lastTx = null;
-      },
-    );
-
-    return controller.stream;
+    userId = uid;
+    _portfolioStream = _portfolioRepository.portfolioStream(userId);
+    getCoinMarket();
   }
 
-  Stream<List<Map<String, dynamic>>> fetchUserTransactions(String userId) {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('transactions')
-        .snapshots()
-        .map((querySnapshot) => querySnapshot.docs.map((doc) {
-              return {
-                'id': doc.id,
-                ...doc.data(),
-              };
-            }).toList());
+  void _resubscribePortfolio() {
+    setState(() {
+      _portfolioStream = _portfolioRepository.portfolioStream(userId);
+    });
   }
 
-  Stream<DocumentSnapshot> fetchWalletStream(String userId) {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .snapshots();
+  @override
+  void dispose() {
+    _currentPrices.dispose();
+    super.dispose();
   }
 
   @override
@@ -161,47 +101,17 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildMarketStateWidget() {
-    if (isRefreshing) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      );
+    if (isRefreshing && (coinMarket == null || coinMarket!.isEmpty)) {
+      return const CoinListSkeleton(count: 4);
     }
     if (coinMarket == null || coinMarket!.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.cloud_off,
-                    size: 48,
-                    color: Theme.of(context).extension<TradingColors>()!.warning,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _marketError?.message ?? 'Market data couldn\'t be loaded. Please try again.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => getCoinMarket(force: true),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
+      if (_marketError != null) {
+        return ErrorState(
+          error: _marketError,
+          onRetry: () => getCoinMarket(force: true),
+        );
+      }
+      return const EmptyState(message: 'No market data found.');
     }
     return const SizedBox.shrink();
   }
@@ -233,114 +143,120 @@ class _HomeState extends State<Home> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: StreamBuilder<PortfolioData>(
-                  stream: _portfolioStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
-                    if (!snapshot.hasData || !snapshot.data!.walletDoc.exists) {
-                      return const Text('No wallet data found.');
-                    }
-
-                    final userData =
-                        snapshot.data!.walletDoc.data() as Map<String, dynamic>;
-                    final walletAmount = (userData['wallet'] ?? 0).toDouble();
-
-                    double inPositions = 0.0;
-                    double equityPositions = 0.0;
-                    final transactions = snapshot.data!.transactions;
-                    final hasMarketData = coinMarket != null && coinMarket!.isNotEmpty;
-
-                    for (var tx in transactions) {
-                      final type = tx['type'];
-                      if (type != 'Buy' && type != 'Sell') continue;
-                      final cost = (tx['cost'] as num?)?.toDouble();
-                      if (cost != null) {
-                        inPositions += cost;
+                child: ValueListenableBuilder<Map<String, double>>(
+                  valueListenable: _currentPrices,
+                  builder: (context, currentPrices, _) =>
+                      StreamBuilder<PortfolioSnapshot>(
+                    stream: _portfolioStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const PortfolioHeaderSkeleton();
+                      }
+                      if (snapshot.hasError) {
+                        return ErrorState(
+                          error: snapshot.error,
+                          onRetry: _resubscribePortfolio,
+                        );
+                      }
+                      if (!snapshot.hasData || !snapshot.data!.wallet.exists) {
+                        return const EmptyState(
+                            message: 'No wallet data found.');
                       }
 
-                      if (hasMarketData) {
-                        final matchingCoins = coinMarket!.where((coin) => coin.id == tx['coinId']);
-                        if (matchingCoins.isNotEmpty) {
-                          final coinData = matchingCoins.first;
-                          final entryPrice = (tx['price'] as num?)?.toDouble() ?? 0.0;
-                          final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
-                          final currentPrice = (coinData.currentPrice as num?)?.toDouble() ?? 0.0;
-                          final profit = computePnl(
-                            type: type,
-                            entryPrice: entryPrice,
-                            currentPrice: currentPrice,
-                            amount: amount,
-                          );
-                          final txCost = cost ?? 0.0;
-                          equityPositions += max(0.0, txCost + profit);
+                      final portfolio = snapshot.data!;
+                      final walletAmount = portfolio.wallet.walletUsd;
+                      double inPositions = 0.0;
+                      double equityPositions = 0.0;
+                      final hasMarketData = currentPrices.isNotEmpty;
+
+                      for (final transaction in portfolio.transactions) {
+                        if (transaction.type != 'Buy' &&
+                            transaction.type != 'Sell') {
+                          continue;
+                        }
+                        inPositions += transaction.cost;
+                        final currentPrice = currentPrices[transaction.coinId];
+                        final profit = currentPrice == null
+                            ? null
+                            : computePnl(
+                                type: transaction.type,
+                                entryPrice: transaction.entryPrice,
+                                currentPrice: currentPrice,
+                                amount: transaction.amount,
+                              );
+                        if (hasMarketData && profit != null) {
+                          equityPositions +=
+                              max(0.0, transaction.cost + profit);
                         }
                       }
-                    }
 
-                    final equity = walletAmount + equityPositions;
+                      final equity = walletAmount + equityPositions;
 
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Available balance',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '\$${formatUsd(walletAmount)}',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'In positions: \$${formatUsd(inPositions)}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            if (hasMarketData) ...[
-                              const SizedBox(height: 2),
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                'Equity: \$${formatUsd(equity)}',
+                                'Available balance',
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.accent,
+                                  fontSize: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '\$${formatUsd(walletAmount)}',
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'In positions: \$${formatUsd(inPositions)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                              if (hasMarketData) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Equity: \$${formatUsd(equity)}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.accent,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                           ),
-                          child: Image.asset(
-                            'assets/icons/5.1.png',
-                            width: 28,
-                            height: 28,
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.15),
+                            ),
+                            child: Image.asset(
+                              'assets/icons/5.1.png',
+                              width: 28,
+                              height: 28,
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -359,87 +275,55 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 12),
             // Assets Content Area
-            if (isRefreshing)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
+            if (isRefreshing && (coinMarket == null || coinMarket!.isEmpty))
+              const SizedBox(height: 300, child: CoinListSkeleton(count: 3))
             else if (coinMarket == null || coinMarket!.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.cloud_off,
-                        size: 48,
-                        color: Theme.of(context).extension<TradingColors>()!.warning,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _marketError?.message ?? 'Market data couldn\'t be loaded. Please try again.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: () => getCoinMarket(),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Try again'),
-                      ),
-                    ],
-                  ),
-                ),
-              )
+              _marketError != null
+                  ? ErrorState(
+                      error: _marketError,
+                      onRetry: () => getCoinMarket(force: true),
+                    )
+                  : const EmptyState(message: 'No market data found.')
             else
-              StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _assetsStream,
+              StreamBuilder<PortfolioSnapshot>(
+                stream: _portfolioStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator());
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
+                        height: 300, child: CoinListSkeleton(count: 3));
                   }
                   if (snapshot.hasError) {
-                    return const Center(
-                        child: Text('Error loading transactions'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(
-                            child: Text('No transactions found.')),
-                      ),
+                    return ErrorState(
+                      error: snapshot.error,
+                      onRetry: _resubscribePortfolio,
                     );
                   }
+                  if (!snapshot.hasData ||
+                      snapshot.data!.transactions.isEmpty) {
+                    return const EmptyState(message: 'No transactions found.');
+                  }
 
-                  userTransactions = List.of(snapshot.data!);
-                  userTransactions!.sort((a, b) {
-                    DateTime dateA = DateTime.parse(a['date']);
-                    DateTime dateB = DateTime.parse(b['date']);
-                    return dateB.compareTo(dateA);
-                  });
+                  final userTransactions = [...snapshot.data!.transactions]
+                    ..sort((a, b) => b.date.compareTo(a.date));
 
                   return ListView.builder(
-                    itemCount: userTransactions!.length,
+                    itemCount: userTransactions.length,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemBuilder: (context, index) {
-                      final transaction = userTransactions![index];
-
-                      final matchingCoins = coinMarket!.where((coin) => coin.id == transaction['coinId']);
+                      final transaction = userTransactions[index];
+                      final matchingCoins = coinMarket!
+                          .where((coin) => coin.id == transaction.coinId);
                       if (matchingCoins.isEmpty) {
                         return const SizedBox.shrink();
                       }
                       final coinData = matchingCoins.first;
 
-                      final type = transaction['type'];
-                      if (type != 'Buy' && type != 'Sell') {
+                      if (transaction.type != 'Buy' &&
+                          transaction.type != 'Sell') {
                         return const SizedBox.shrink();
                       }
+                      final transactionData = transaction.toMap();
 
                       // PnL is computed inside AssetDetailScreen
 
@@ -450,14 +334,14 @@ class _HomeState extends State<Home> {
                             MaterialPageRoute(
                               builder: (_) => AssetDetailScreen(
                                 coin: coinData,
-                                transaction: transaction,
+                                transaction: transactionData,
                               ),
                             ),
                           );
                         },
                         child: Item(
                           item: coinData,
-                          transaction: transaction,
+                          transaction: transactionData,
                         ),
                       );
                     },
@@ -479,11 +363,12 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 12),
             // Recommend to Buy Content Area
-            if (isRefreshing)
-              const Center(
+            if (isRefreshing && (coinMarket == null || coinMarket!.isEmpty))
+              const SizedBox(
+                height: 220,
                 child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: CircularProgressIndicator(),
+                  padding: EdgeInsets.all(16),
+                  child: SkeletonShimmer(height: 200, borderRadius: 20),
                 ),
               )
             else if (coinMarket == null || coinMarket!.isEmpty)
@@ -509,7 +394,7 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildTop10Tab() {
-    if (isRefreshing || coinMarket == null || coinMarket!.isEmpty) {
+    if (coinMarket == null || coinMarket!.isEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) => _buildStateWidgetForTab(constraints),
       );
@@ -539,14 +424,15 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildExperimentalTab() {
-    if (isRefreshing || coinMarket == null || coinMarket!.isEmpty) {
+    if (coinMarket == null || coinMarket!.isEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) => _buildStateWidgetForTab(constraints),
       );
     }
 
     final sortedByChange = List<CoinModel>.from(coinMarket!)
-      ..sort((a, b) => b.marketCapChangePercentage24H.compareTo(a.marketCapChangePercentage24H));
+      ..sort((a, b) =>
+          b.priceChangePercentage24h.compareTo(a.priceChangePercentage24h));
 
     final topGainers = sortedByChange.take(5).toList();
     final topLosers = sortedByChange.reversed.take(5).toList();
@@ -558,7 +444,8 @@ class _HomeState extends State<Home> {
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
               'Top Gainers',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -569,7 +456,8 @@ class _HomeState extends State<Home> {
           ...topGainers.map((coin) => CoinTile(coin: coin)),
           const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
               'Top Losers',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -600,8 +488,11 @@ class _HomeState extends State<Home> {
         coinMarketList = coins;
         coinMarket = coins;
         _marketError = null;
+        _currentPrices.value = {
+          for (final coin in coins) coin.id: coin.currentPrice,
+        };
       });
-      if (mounted && userId.isNotEmpty && coinMarket != null && coinMarket!.isNotEmpty) {
+      if (mounted && coinMarket != null && coinMarket!.isNotEmpty) {
         _checkLiquidations();
       }
     } catch (e) {
@@ -617,34 +508,30 @@ class _HomeState extends State<Home> {
   bool _liquidating = false;
 
   Future<void> _checkLiquidations() async {
-    if (_liquidating || userId.isEmpty || coinMarket == null || coinMarket!.isEmpty) {
+    if (_liquidating || coinMarket == null || coinMarket!.isEmpty) {
       return;
     }
     _liquidating = true;
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('transactions')
-          .get();
+      final transactions =
+          await _portfolioRepository.transactionsStream(userId).first;
 
       final List<String> liquidatedCoins = [];
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final type = data['type'];
-        final coinId = data['coinId'];
-        final cost = (data['cost'] as num?)?.toDouble();
+      for (final transaction in transactions) {
+        final type = transaction.type;
+        final coinId = transaction.coinId;
+        final cost = transaction.cost;
 
-        if (type != 'Sell' || coinId == null || cost == null) continue;
+        if (type != 'Sell' || coinId.isEmpty) continue;
 
-        final matchingCoins = coinMarket!.where((c) => c.id == coinId);
+        final matchingCoins = coinMarket!.where((coin) => coin.id == coinId);
         if (matchingCoins.isEmpty) continue;
         final coinData = matchingCoins.first;
 
-        final entryPrice = (data['price'] as num?)?.toDouble() ?? 0.0;
-        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-        final currentPrice = (coinData.currentPrice as num).toDouble();
+        final entryPrice = transaction.entryPrice;
+        final amount = transaction.amount;
+        final currentPrice = coinData.currentPrice;
 
         if (isLiquidated(
           type: 'Sell',
@@ -655,7 +542,8 @@ class _HomeState extends State<Home> {
         )) {
           double freshPrice;
           try {
-            freshPrice = await MarketRepository.instance.getFreshPrice(coinId.toString());
+            freshPrice = await MarketRepository.instance
+                .getFreshPrice(coinId.toString());
           } catch (_) {
             continue;
           }
@@ -670,7 +558,7 @@ class _HomeState extends State<Home> {
             try {
               await TradeService().closeTrade(
                 userId: userId,
-                transactionId: doc.id,
+                transactionId: transaction.id,
                 currentPrice: freshPrice,
               );
               liquidatedCoins.add(coinId.toString());
@@ -681,7 +569,9 @@ class _HomeState extends State<Home> {
 
       if (liquidatedCoins.isNotEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Short on ${liquidatedCoins.join(', ')} was liquidated')),
+          SnackBar(
+              content: Text(
+                  'Short on ${liquidatedCoins.join(', ')} was liquidated')),
         );
       }
     } catch (_) {
