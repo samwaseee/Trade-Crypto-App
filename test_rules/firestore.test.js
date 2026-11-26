@@ -31,6 +31,21 @@ beforeEach(async () => {
 describe("Firestore Security Rules", () => {
   const aliceId = "alice";
   const bobId = "bob";
+  const validClosedTrade = () => ({
+    type: "Buy",
+    coinId: "bitcoin",
+    coinName: "Bitcoin",
+    coinSymbol: "btc",
+    coinImage: "https://example.com/bitcoin.png",
+    amount: 1,
+    entryPrice: 100,
+    exitPrice: 110,
+    cost: 100,
+    realizedPnl: 10,
+    closeReason: "manual",
+    openedAt: firebase.firestore.Timestamp.fromDate(new Date("2026-01-01T00:00:00Z")),
+    closedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
 
   test("owner can read own user doc", async () => {
     const db = testEnv.authenticatedContext(aliceId, { email: "alice@test.com" }).firestore();
@@ -496,6 +511,44 @@ describe("Firestore Security Rules", () => {
     await assertFails(unauthenticatedCreate.set(message));
     await assertFails(unauthenticatedMessage.update({ text: "Changed" }));
     await assertFails(unauthenticatedMessage.delete());
+  });
+
+  test("owner can create a valid closed trade", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const closedTrade = db.collection("users").doc(aliceId).collection("closedTrades").doc("trade-1");
+
+    await assertSucceeds(closedTrade.set(validClosedTrade()));
+    await assertSucceeds(closedTrade.get());
+  });
+
+  test("another user cannot create a closed trade for the owner", async () => {
+    const db = testEnv.authenticatedContext(bobId).firestore();
+    const closedTrade = db.collection("users").doc(aliceId).collection("closedTrades").doc("trade-1");
+
+    await assertFails(closedTrade.set(validClosedTrade()));
+  });
+
+  test("closed trades reject extra fields and invalid close reasons", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const trades = db.collection("users").doc(aliceId).collection("closedTrades");
+
+    await assertFails(trades.doc("extra-field").set({
+      ...validClosedTrade(),
+      extra: "not allowed",
+    }));
+    await assertFails(trades.doc("bad-reason").set({
+      ...validClosedTrade(),
+      closeReason: "automatic",
+    }));
+  });
+
+  test("closed trades cannot be updated or deleted", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const closedTrade = db.collection("users").doc(aliceId).collection("closedTrades").doc("trade-1");
+
+    await assertSucceeds(closedTrade.set(validClosedTrade()));
+    await assertFails(closedTrade.update({ realizedPnl: 99 }));
+    await assertFails(closedTrade.delete());
   });
 
   test("owner can read and increment assistant usage by one", async () => {

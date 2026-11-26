@@ -22,6 +22,46 @@ service cloud.firestore {
         request.resource.data.image.size() <= 2048;
     }
 
+    function isValidClosedTrade() {
+      return request.resource.data.keys().hasAll([
+          'type', 'coinId', 'coinName', 'coinSymbol', 'coinImage', 'amount',
+          'entryPrice', 'exitPrice', 'cost', 'realizedPnl', 'closeReason',
+          'openedAt', 'closedAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'type', 'coinId', 'coinName', 'coinSymbol', 'coinImage', 'amount',
+          'entryPrice', 'exitPrice', 'cost', 'realizedPnl', 'closeReason',
+          'openedAt', 'closedAt'
+        ]) &&
+        request.resource.data.type is string &&
+        request.resource.data.type in ['Buy', 'Sell'] &&
+        request.resource.data.coinId is string &&
+        request.resource.data.coinId.size() > 0 &&
+        request.resource.data.coinId.size() <= 100 &&
+        request.resource.data.coinName is string &&
+        request.resource.data.coinName.size() > 0 &&
+        request.resource.data.coinName.size() <= 100 &&
+        request.resource.data.coinSymbol is string &&
+        request.resource.data.coinSymbol.size() > 0 &&
+        request.resource.data.coinSymbol.size() <= 20 &&
+        request.resource.data.coinImage is string &&
+        request.resource.data.coinImage.size() <= 2048 &&
+        request.resource.data.amount is number &&
+        request.resource.data.amount >= 0 &&
+        request.resource.data.entryPrice is number &&
+        request.resource.data.entryPrice >= 0 &&
+        request.resource.data.exitPrice is number &&
+        request.resource.data.exitPrice >= 0 &&
+        request.resource.data.cost is number &&
+        request.resource.data.cost >= 0 &&
+        request.resource.data.realizedPnl is number &&
+        request.resource.data.closeReason is string &&
+        request.resource.data.closeReason in ['manual', 'liquidated'] &&
+        request.resource.data.openedAt is timestamp &&
+        request.resource.data.closedAt is timestamp &&
+        request.resource.data.closedAt == request.time;
+    }
+
     function isValidCoinId(coinId) {
       return coinId.matches('^[a-z0-9._-]{1,100}$');
     }
@@ -94,6 +134,13 @@ service cloud.firestore {
           resource.data.count >= 0 &&
           resource.data.count < 100 &&
           request.resource.data.count == resource.data.count + 1;
+        allow delete: if false;
+      }
+
+      match /closedTrades/{closedTradeId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidClosedTrade();
+        allow update: if false;
         allow delete: if false;
       }
 

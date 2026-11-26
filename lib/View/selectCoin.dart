@@ -305,12 +305,18 @@ class _SelectCoinState extends State<SelectCoin> {
     if (_user == null) return;
     HapticFeedback.mediumImpact();
     try {
-      await TradeService().closeTrade(
+      final realizedPnl = await TradeService().closeTrade(
         userId: _user!.uid,
         transactionId: txId,
         currentPrice: currentPrice,
+        coinName: _coin.name,
+        coinSymbol: _coin.symbol,
+        coinImage: _coin.image,
       );
-      _snack('Position closed successfully');
+      _snack(
+        'Position closed at \$${formatUsd(currentPrice)} · '
+        'Realized ${formatSignedUsd(realizedPnl)}',
+      );
     } catch (e) {
       _snack('Failed to close position: $e');
     }

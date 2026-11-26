@@ -201,14 +201,22 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     setState(() => _closingTrade = true);
     try {
       await _refreshLivePrice();
-      await TradeService().closeTrade(
+      final realizedPnl = await TradeService().closeTrade(
         userId: userId,
         transactionId: _txId,
         currentPrice: _livePrice,
+        coinName: widget.coin.name,
+        coinSymbol: widget.coin.symbol,
+        coinImage: widget.coin.image,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Position closed at \$${formatUsd(_livePrice)}')),
+        SnackBar(
+          content: Text(
+            'Position closed at \$${formatUsd(_livePrice)} · '
+            'Realized ${formatSignedUsd(realizedPnl)}',
+          ),
+        ),
       );
       Navigator.pop(context);
     } catch (e) {

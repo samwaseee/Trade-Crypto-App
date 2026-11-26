@@ -101,6 +101,71 @@ class PortfolioTransaction {
       };
 }
 
+class ClosedTrade {
+  const ClosedTrade({
+    required this.id,
+    required this.type,
+    required this.coinId,
+    required this.coinName,
+    required this.coinSymbol,
+    required this.coinImage,
+    required this.amount,
+    required this.entryPrice,
+    required this.exitPrice,
+    required this.cost,
+    required this.realizedPnl,
+    required this.closeReason,
+    required this.openedAt,
+    required this.closedAt,
+  });
+
+  final String id;
+  final String type;
+  final String coinId;
+  final String coinName;
+  final String coinSymbol;
+  final String coinImage;
+  final double amount;
+  final double entryPrice;
+  final double exitPrice;
+  final double cost;
+  final double realizedPnl;
+  final String closeReason;
+  final DateTime openedAt;
+  final DateTime closedAt;
+
+  factory ClosedTrade.fromFirestore(
+    String id,
+    Map<String, dynamic> data,
+  ) {
+    final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+    DateTime readDate(Object? value) => switch (value) {
+          Timestamp timestamp => timestamp.toDate(),
+          DateTime date => date,
+          String date => DateTime.tryParse(date) ?? epoch,
+          _ => epoch,
+        };
+    double readNumber(String key) => (data[key] as num?)?.toDouble() ?? 0.0;
+
+    return ClosedTrade(
+      id: id,
+      type: data['type'] as String? ?? '',
+      coinId: data['coinId'] as String? ?? '',
+      coinName: data['coinName'] as String? ?? '',
+      coinSymbol: data['coinSymbol'] as String? ?? '',
+      coinImage: data['coinImage'] as String? ?? '',
+      amount: readNumber('amount'),
+      entryPrice: readNumber('entryPrice'),
+      exitPrice: readNumber('exitPrice'),
+      cost: readNumber('cost'),
+      realizedPnl: readNumber('realizedPnl'),
+      closeReason: data['closeReason'] as String? ?? 'manual',
+      openedAt: readDate(data['openedAt']),
+      closedAt: readDate(data['closedAt']),
+    );
+  }
+}
+
 class PortfolioSnapshot {
   const PortfolioSnapshot({
     required this.wallet,
@@ -141,6 +206,19 @@ class PortfolioRepository {
             .map(
                 (doc) => PortfolioTransaction.fromFirestore(doc.id, doc.data()))
             .toList());
+  }
+
+  Stream<List<ClosedTrade>> closedTradesStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('closedTrades')
+        .orderBy('closedAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ClosedTrade.fromFirestore(doc.id, doc.data()))
+            .toList(growable: false));
   }
 
   Stream<PortfolioSnapshot> portfolioStream(

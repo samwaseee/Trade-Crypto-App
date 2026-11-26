@@ -62,19 +62,28 @@ class TradeService {
     });
   }
 
-  Future<void> closeTrade({
+  Future<double> closeTrade({
     required String userId,
     required String transactionId,
     required double currentPrice,
+    required String coinName,
+    required String coinSymbol,
+    required String coinImage,
+    String closeReason = 'manual',
   }) async {
     if (!currentPrice.isFinite || currentPrice <= 0) {
       throw Exception('Invalid price.');
     }
+    if (closeReason != 'manual' && closeReason != 'liquidated') {
+      throw Exception("Invalid close reason: '$closeReason'.");
+    }
 
     final userDocRef = _firestore.collection('users').doc(userId);
-    final transactionDocRef = userDocRef.collection('transactions').doc(transactionId);
+    final transactionDocRef =
+        userDocRef.collection('transactions').doc(transactionId);
+    final closedTradeDocRef = userDocRef.collection('closedTrades').doc();
 
-    await _firestore.runTransaction((transaction) async {
+    return _firestore.runTransaction<double>((transaction) async {
       final userSnapshot = await transaction.get(userDocRef);
       final transactionSnapshot = await transaction.get(transactionDocRef);
 
@@ -86,12 +95,15 @@ class TradeService {
       }
 
       final userData = userSnapshot.data() as Map<String, dynamic>;
-      final transactionData = transactionSnapshot.data() as Map<String, dynamic>;
+      final transactionData =
+          transactionSnapshot.data() as Map<String, dynamic>;
 
       final currentWallet = (userData['wallet'] ?? 0.0) as num;
       final type = transactionData['type'];
       if (type != 'Buy' && type != 'Sell') {
-        throw Exception("Invalid trade type in record: '$type'. Expected 'Buy' or 'Sell'.");
+        throw Exception(
+          "Invalid trade type in record: '$type'. Expected 'Buy' or 'Sell'.",
+        );
       }
 
       final entryPrice = (transactionData['price'] as num?)?.toDouble() ?? 0.0;
@@ -106,11 +118,36 @@ class TradeService {
       );
 
       final rawReturnToWallet = storedCost + pnl;
-      final returnToWallet = roundTo(rawReturnToWallet < 0 ? 0.0 : rawReturnToWallet, 8);
+      final returnToWallet = roundTo(
+        rawReturnToWallet < 0 ? 0.0 : rawReturnToWallet,
+        8,
+      );
       final newWallet = roundTo(currentWallet.toDouble() + returnToWallet, 8);
+      final realizedPnl = roundTo(returnToWallet - storedCost, 8);
+      final rawOpenedAt = transactionData['date'];
+      final openedAt = rawOpenedAt is String
+          ? DateTime.tryParse(rawOpenedAt) ?? DateTime.now()
+          : DateTime.now();
 
       transaction.update(userDocRef, {'wallet': newWallet});
+      transaction.set(closedTradeDocRef, {
+        'type': type,
+        'coinId': transactionData['coinId'] as String? ?? '',
+        'coinName': coinName,
+        'coinSymbol': coinSymbol,
+        'coinImage': coinImage,
+        'amount': amount,
+        'entryPrice': entryPrice,
+        'exitPrice': currentPrice,
+        'cost': storedCost,
+        'realizedPnl': realizedPnl,
+        'closeReason': closeReason,
+        'openedAt': Timestamp.fromDate(openedAt),
+        'closedAt': FieldValue.serverTimestamp(),
+      });
       transaction.delete(transactionDocRef);
+
+      return realizedPnl;
     });
   }
 }

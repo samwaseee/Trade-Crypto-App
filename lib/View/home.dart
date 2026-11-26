@@ -16,6 +16,7 @@ import 'package:my_crypto/View/Components/item2.dart';
 import 'package:my_crypto/View/Components/state_widgets.dart';
 import 'package:my_crypto/View/asset_detail_screen.dart';
 import 'package:my_crypto/View/selectCoin.dart';
+import 'package:my_crypto/View/trade_history_screen.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
@@ -278,10 +279,21 @@ class _HomeState extends State<Home> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: Row(
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'Assets',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => TradeHistoryScreen(userId: userId),
+                        ),
+                      );
+                    },
+                    child: const Text('History'),
                   ),
                 ],
               ),
@@ -801,6 +813,10 @@ class _HomeState extends State<Home> {
                 userId: userId,
                 transactionId: transaction.id,
                 currentPrice: freshPrice,
+                coinName: coinData.name,
+                coinSymbol: coinData.symbol,
+                coinImage: coinData.image,
+                closeReason: 'liquidated',
               );
               liquidatedCoins.add(coinId.toString());
             } catch (_) {}
