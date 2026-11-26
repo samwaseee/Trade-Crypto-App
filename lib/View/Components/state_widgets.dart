@@ -180,24 +180,36 @@ class ErrorState extends StatelessWidget {
             ? (error! as MarketException).message
             : 'Something went wrong. Please try again.');
     final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_outlined, size: 48, color: scheme.error),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final content = Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 48, color: scheme.error),
+                const SizedBox(height: 12),
+                Text(message, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+        if (!constraints.maxHeight.isFinite) return content;
+
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: content,
+          ),
+        );
+      },
     );
   }
 }

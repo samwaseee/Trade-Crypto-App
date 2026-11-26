@@ -8,8 +8,20 @@ import 'package:my_crypto/utils/format.dart';
 class CoinTile extends StatelessWidget {
   final CoinModel coin;
   final int? rank;
+  final EdgeInsetsGeometry margin;
+  final bool isWatchlisted;
+  final bool isWatchlistLoading;
+  final VoidCallback? onWatchlistTap;
 
-  const CoinTile({super.key, required this.coin, this.rank});
+  const CoinTile({
+    super.key,
+    required this.coin,
+    this.rank,
+    this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    this.isWatchlisted = false,
+    this.isWatchlistLoading = false,
+    this.onWatchlistTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,143 +61,168 @@ class CoinTile extends StatelessWidget {
     final changeLabel =
         '$changeDirection ${coin.priceChangePercentage24h.abs().toStringAsFixed(2)} percent';
 
-    return Semantics(
-      button: true,
-      excludeSemantics: true,
-      label:
-          '${coin.name}, ${formatUsd(coin.currentPrice)} dollars, $changeLabel',
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SelectCoin(selectItem: coin),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final showSparkline =
-                    constraints.maxWidth >= 330 && sparklinePrices.isNotEmpty;
-
-                return Row(
-                  children: [
-                    if (rank != null) ...[
-                      SizedBox(
-                        width: 28,
-                        child: Text(
-                          '#$rank',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Image.network(
-                        coin.image,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.currency_bitcoin, size: 28),
-                      ),
+    return Card(
+      margin: margin,
+      child: Row(
+        children: [
+          Expanded(
+            child: Semantics(
+              button: true,
+              excludeSemantics: true,
+              label:
+                  '${coin.name}, ${formatUsd(coin.currentPrice)} dollars, $changeLabel',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SelectCoin(selectItem: coin),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final showSparkline = constraints.maxWidth >= 330 &&
+                          sparklinePrices.isNotEmpty;
+
+                      return Row(
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  coin.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          if (rank != null) ...[
+                            SizedBox(
+                              width: 28,
+                              child: Text(
+                                '#$rank',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  coin.symbol.toUpperCase(),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Image.network(
+                              coin.image,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.currency_bitcoin, size: 28),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        coin.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        coin.symbol.toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color:
+                                              colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '\$${formatUsd(coin.currentPrice)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '\$${formatUsd(coin.currentPrice)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                          if (showSparkline) ...[
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 50,
+                              height: 30,
+                              child: Sparkline(
+                                data: sparklinePrices,
+                                lineWidth: 1.5,
+                                lineColor: sparklineColor,
+                                fillMode: FillMode.below,
+                                fillGradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const [0.0, 0.7],
+                                  colors: [
+                                    sparklineColor,
+                                    sparklineColor.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ] else ...[
+                            const SizedBox(width: 8),
+                          ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: changeBgColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$changeMarker${coin.priceChangePercentage24h.abs().toStringAsFixed(2)}%',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: changeColor,
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    if (showSparkline) ...[
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 50,
-                        height: 30,
-                        child: Sparkline(
-                          data: sparklinePrices,
-                          lineWidth: 1.5,
-                          lineColor: sparklineColor,
-                          fillMode: FillMode.below,
-                          fillGradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.0, 0.7],
-                            colors: [
-                              sparklineColor,
-                              sparklineColor.withValues(alpha: 0.1),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ] else ...[
-                      const SizedBox(width: 8),
-                    ],
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: changeBgColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$changeMarker${coin.priceChangePercentage24h.abs().toStringAsFixed(2)}%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: changeColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          if (onWatchlistTap != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: isWatchlisted
+                    ? 'Remove from watchlist'
+                    : 'Add to watchlist',
+                onPressed: isWatchlistLoading ? null : onWatchlistTap,
+                icon: Icon(
+                  isWatchlisted ? Icons.star : Icons.star_border,
+                  color: isWatchlisted
+                      ? colorScheme.accent
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -26,6 +26,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('CoinTile shows and toggles the filled watchlist star',
+      (tester) async {
+    final coin = CoinModel(
+      id: 'bitcoin',
+      symbol: 'btc',
+      name: 'Bitcoin',
+      image: '',
+      currentPrice: 67321.45,
+      marketCapRank: 1,
+      totalVolume: 24300000000,
+      high24H: 68000,
+      low24H: 65000,
+      priceChange24H: 1230,
+      priceChangePercentage24h: 5.4,
+      marketCapChangePercentage24H: 1.2,
+      sparklineIn7D: SparklineIn7D(price: []),
+    );
+    var tapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: CoinTile(
+            coin: coin,
+            isWatchlisted: true,
+            onWatchlistTap: () => tapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.star), findsOneWidget);
+    expect(find.byTooltip('Remove from watchlist'), findsOneWidget);
+    await tester.tap(find.byTooltip('Remove from watchlist'));
+    expect(tapped, isTrue);
+  });
+
   testWidgets('CoinTile and Item2 fit at large text size', (tester) async {
     final coin = CoinModel(
       id: 'bitcoin',

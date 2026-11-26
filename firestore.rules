@@ -1,9 +1,29 @@
+// Watchlist documents at users/{userId}/watchlist/{coinId} contain only:
+// name (string, 1-100 chars), symbol (string, 1-20 chars),
+// image (string, 0-2048 chars).
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isValidWatchlistCoin() {
+      return request.resource.data.keys().hasAll(['name', 'symbol', 'image']) &&
+        request.resource.data.keys().hasOnly(['name', 'symbol', 'image']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 100 &&
+        request.resource.data.symbol is string &&
+        request.resource.data.symbol.size() > 0 &&
+        request.resource.data.symbol.size() <= 20 &&
+        request.resource.data.image is string &&
+        request.resource.data.image.size() <= 2048;
+    }
+
+    function isValidCoinId(coinId) {
+      return coinId.matches('^[a-z0-9._-]{1,100}$');
     }
 
     match /users/{userId} {
@@ -31,6 +51,12 @@ service cloud.firestore {
         request.resource.data.wallet <= 1000000000;
 
       allow delete: if false;
+
+      match /watchlist/{coinId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidCoinId(coinId) && isValidWatchlistCoin();
+        allow delete: if isOwner(userId);
+      }
 
       match /transactions/{transactionId} {
         allow read: if isOwner(userId);

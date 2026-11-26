@@ -1,16 +1,21 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/Model/coinModel.dart';
+import 'package:my_crypto/Model/watchlist_coin.dart';
 import 'package:my_crypto/Services/market_repository.dart';
 import 'package:my_crypto/Services/portfolio_repository.dart';
 import 'package:my_crypto/Services/trade_service.dart';
+import 'package:my_crypto/Services/watchlist_repository.dart';
+import 'package:my_crypto/View/Components/coin_search_list.dart';
 import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item.dart';
 import 'package:my_crypto/View/Components/item2.dart';
 import 'package:my_crypto/View/Components/state_widgets.dart';
 import 'package:my_crypto/View/asset_detail_screen.dart';
+import 'package:my_crypto/View/selectCoin.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/utils/format.dart';
 import 'package:my_crypto/utils/pnl.dart';
@@ -24,9 +29,15 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final PortfolioRepository _portfolioRepository = PortfolioRepository.instance;
+  final WatchlistRepository _watchlistRepository = WatchlistRepository.instance;
   late final String userId;
   bool isRefreshing = true;
   late Stream<PortfolioSnapshot> _portfolioStream;
+  StreamSubscription<List<WatchlistCoin>>? _watchlistSubscription;
+  List<WatchlistCoin> _watchlistCoins = [];
+  final Set<String> _pendingWatchlistIds = {};
+  bool _isWatchlistLoading = true;
+  Object? _watchlistError;
   final ValueNotifier<Map<String, double>> _currentPrices = ValueNotifier({});
 
   @override
@@ -39,6 +50,7 @@ class _HomeState extends State<Home> {
     userId = uid;
     _portfolioStream = _portfolioRepository.portfolioStream(userId);
     getCoinMarket();
+    _subscribeToWatchlist();
   }
 
   void _resubscribePortfolio() {
@@ -49,6 +61,7 @@ class _HomeState extends State<Home> {
 
   @override
   void dispose() {
+    unawaited(_watchlistSubscription?.cancel());
     _currentPrices.dispose();
     super.dispose();
   }
@@ -387,10 +400,213 @@ class _HomeState extends State<Home> {
                 ),
               ),
             const SizedBox(height: 24),
+            _buildWatchlistSection(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildWatchlistSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'Watchlist',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_isWatchlistLoading)
+          const CoinListSkeleton(count: 2)
+        else if (_watchlistError != null)
+          SizedBox(
+            height: 180,
+            child: ErrorState(
+              error: _watchlistError,
+              message:
+                  'Could not load your watchlist. Check your connection and try again.',
+              onRetry: _retryWatchlist,
+            ),
+          )
+        else if (_watchlistCoins.isEmpty)
+          const EmptyState(
+            message: 'Star a coin in Top 10 coins to add it to your watchlist.',
+            icon: Icons.star_outline,
+          )
+        else
+          ..._watchlistCoins.map(_buildWatchlistCoinTile),
+      ],
+    );
+  }
+
+  Widget _buildWatchlistCoinTile(WatchlistCoin entry) {
+    final marketCoin = _findMarketCoin(entry.id);
+    if (marketCoin != null) {
+      return CoinTile(
+        coin: marketCoin,
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        isWatchlisted: true,
+        isWatchlistLoading: _pendingWatchlistIds.contains(entry.id),
+        onWatchlistTap: _canManageWatchlist
+            ? () => _removeWatchlistCoin(entry.id)
+            : null,
+      );
+    }
+
+    final isPending = _pendingWatchlistIds.contains(entry.id);
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListTile(
+        leading: SizedBox(
+          width: 36,
+          height: 36,
+          child: entry.image.isEmpty
+              ? const Icon(Icons.currency_bitcoin)
+              : Image.network(
+                  entry.image,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.currency_bitcoin),
+                ),
+        ),
+        title: Text(entry.name),
+        subtitle: Text(entry.symbol.toUpperCase()),
+        trailing: IconButton(
+          tooltip: 'Remove from watchlist',
+          onPressed: !_canManageWatchlist || isPending
+              ? null
+              : () => _removeWatchlistCoin(entry.id),
+          icon: Icon(
+            Icons.star,
+            color: Theme.of(context).colorScheme.accent,
+          ),
+        ),
+      ),
+    );
+  }
+
+  CoinModel? _findMarketCoin(String coinId) {
+    for (final coin in coinMarket ?? const <dynamic>[]) {
+      if (coin is CoinModel && coin.id == coinId) return coin;
+    }
+    return null;
+  }
+
+  bool get _canManageWatchlist =>
+      !_isWatchlistLoading && _watchlistError == null;
+
+  void _subscribeToWatchlist() {
+    unawaited(_watchlistSubscription?.cancel());
+    _watchlistSubscription = _watchlistRepository
+        .watchlistStream(userId)
+        .listen(
+      (coins) {
+        if (!mounted) return;
+        setState(() {
+          _watchlistCoins = coins;
+          _isWatchlistLoading = false;
+          _watchlistError = null;
+        });
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        setState(() {
+          _isWatchlistLoading = false;
+          _watchlistError = error;
+        });
+      },
+    );
+  }
+
+  void _retryWatchlist() {
+    setState(() {
+      _isWatchlistLoading = true;
+      _watchlistError = null;
+    });
+    _subscribeToWatchlist();
+  }
+
+  Future<void> _toggleWatchlist(CoinModel coin) async {
+    final isWatchlisted = _watchlistCoins.any((entry) => entry.id == coin.id);
+    final watchlistCoin = WatchlistCoin(
+      id: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      image: coin.image,
+    );
+    await _updateWatchlist(
+      coin.id,
+      shouldBeWatchlisted: !isWatchlisted,
+      coin: watchlistCoin,
+      update: () async {
+        if (isWatchlisted) {
+          await _watchlistRepository.removeCoin(userId, coin.id);
+        } else {
+          await _watchlistRepository.addCoin(userId, watchlistCoin);
+        }
+      },
+    );
+  }
+
+  Future<void> _removeWatchlistCoin(String coinId) {
+    return _updateWatchlist(
+      coinId,
+      shouldBeWatchlisted: false,
+      update: () => _watchlistRepository.removeCoin(userId, coinId),
+    );
+  }
+
+  Future<void> _updateWatchlist(
+    String coinId, {
+    required bool shouldBeWatchlisted,
+    WatchlistCoin? coin,
+    required Future<void> Function() update,
+  }) async {
+    if (!_canManageWatchlist || _pendingWatchlistIds.contains(coinId)) return;
+
+    WatchlistCoin? previousCoin;
+    for (final entry in _watchlistCoins) {
+      if (entry.id == coinId) {
+        previousCoin = entry;
+        break;
+      }
+    }
+
+    setState(() {
+      _pendingWatchlistIds.add(coinId);
+      _watchlistCoins = _watchlistCoins
+          .where((entry) => entry.id != coinId)
+          .toList();
+      if (shouldBeWatchlisted && coin != null) {
+        _watchlistCoins.add(coin);
+      }
+    });
+
+    try {
+      await update().timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      // Firestore may still complete this queued write after reconnecting.
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _watchlistCoins = _watchlistCoins
+              .where((entry) => entry.id != coinId)
+              .toList();
+          if (previousCoin != null) _watchlistCoins.add(previousCoin);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not update your watchlist. Check your connection and retry. ($error)',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pendingWatchlistIds.remove(coinId));
+    }
   }
 
   Widget _buildTop10Tab() {
@@ -406,20 +622,25 @@ class _HomeState extends State<Home> {
       ..sort((a, b) => a.marketCapRank.compareTo(b.marketCapRank));
     final limitedTop10 = top10Coins.take(10).toList();
 
-    return RefreshIndicator(
+    return CoinSearchList(
+      marketCoins: limitedTop10,
+      search: MarketRepository.instance.searchCoins,
       onRefresh: () => getCoinMarket(force: true),
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        itemCount: limitedTop10.length,
-        itemBuilder: (context, index) {
-          final coin = limitedTop10[index];
-          return CoinTile(
-            coin: coin,
-            rank: coin.marketCapRank,
-          );
-        },
+      coinTileBuilder: (coin) => CoinTile(
+        coin: coin,
+        rank: coin.marketCapRank,
+        isWatchlisted: _watchlistCoins.any((entry) => entry.id == coin.id),
+        isWatchlistLoading: _pendingWatchlistIds.contains(coin.id),
+        onWatchlistTap:
+            _canManageWatchlist ? () => _toggleWatchlist(coin) : null,
       ),
+      onResultSelected: (result) {
+        final coin = _findMarketCoin(result.id) ?? result.toCoinModel();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SelectCoin(selectItem: coin)),
+        );
+      },
     );
   }
 
@@ -453,7 +674,17 @@ class _HomeState extends State<Home> {
                   ),
             ),
           ),
-          ...topGainers.map((coin) => CoinTile(coin: coin)),
+          ...topGainers.map(
+            (coin) => CoinTile(
+              coin: coin,
+              isWatchlisted:
+                  _watchlistCoins.any((entry) => entry.id == coin.id),
+              isWatchlistLoading: _pendingWatchlistIds.contains(coin.id),
+              onWatchlistTap: _canManageWatchlist
+                  ? () => _toggleWatchlist(coin)
+                  : null,
+            ),
+          ),
           const SizedBox(height: 16),
           Padding(
             padding:
@@ -465,14 +696,24 @@ class _HomeState extends State<Home> {
                   ),
             ),
           ),
-          ...topLosers.map((coin) => CoinTile(coin: coin)),
+          ...topLosers.map(
+            (coin) => CoinTile(
+              coin: coin,
+              isWatchlisted:
+                  _watchlistCoins.any((entry) => entry.id == coin.id),
+              isWatchlistLoading: _pendingWatchlistIds.contains(coin.id),
+              onWatchlistTap: _canManageWatchlist
+                  ? () => _toggleWatchlist(coin)
+                  : null,
+            ),
+          ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  List? coinMarket = [];
+  List<CoinModel>? coinMarket = [];
   List<CoinModel>? coinMarketList;
   MarketException? _marketError;
 

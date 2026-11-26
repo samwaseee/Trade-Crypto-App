@@ -10,9 +10,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../Model/article.dart';
 import '../Model/chartModel.dart';
 import '../Model/coinModel.dart';
+import '../Model/watchlist_coin.dart';
 import '../Services/market_repository.dart';
 import '../Services/news_service.dart';
 import '../Services/trade_service.dart';
+import '../Services/watchlist_repository.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
@@ -47,6 +49,10 @@ class _SelectCoinState extends State<SelectCoin> {
 
   // ── watchlist / favorite ───────────────────────────────────────────────────
   bool _isFavorite = false;
+  bool _watchlistLoading = true;
+  bool _watchlistPending = false;
+  Object? _watchlistError;
+  StreamSubscription<List<WatchlistCoin>>? _watchlistSubscription;
 
   // ── trade panel ───────────────────────────────────────────────────────────
   double _amount = 1.0;
@@ -90,6 +96,9 @@ class _SelectCoinState extends State<SelectCoin> {
           .doc(_user!.uid)
           .collection('transactions')
           .snapshots();
+      _subscribeToWatchlist();
+    } else {
+      _watchlistLoading = false;
     }
 
     _loadChart();
@@ -98,6 +107,7 @@ class _SelectCoinState extends State<SelectCoin> {
 
   @override
   void dispose() {
+    unawaited(_watchlistSubscription?.cancel());
     _amountCtrl.dispose();
     super.dispose();
   }
@@ -165,12 +175,74 @@ class _SelectCoinState extends State<SelectCoin> {
     ]);
   }
 
-  void _toggleFavorite() {
-    setState(() => _isFavorite = !_isFavorite);
+  void _subscribeToWatchlist() {
+    final userId = _user?.uid;
+    if (userId == null) return;
+    unawaited(_watchlistSubscription?.cancel());
+    _watchlistSubscription = WatchlistRepository.instance
+        .watchlistStream(userId)
+        .listen(
+      (coins) {
+        if (!mounted) return;
+        setState(() {
+          _isFavorite = coins.any((coin) => coin.id == _coin.id);
+          _watchlistLoading = false;
+          _watchlistError = null;
+        });
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        setState(() {
+          _watchlistLoading = false;
+          _watchlistError = error;
+        });
+      },
+    );
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = _user;
+    if (user == null) {
+      _snack('Please sign in to manage your watchlist');
+      return;
+    }
+    if (_watchlistLoading || _watchlistPending) return;
+    if (_watchlistError != null) {
+      _snack('Could not load your watchlist. Check your Firestore permissions.');
+      return;
+    }
+
+    final shouldBeWatchlisted = !_isFavorite;
+    final watchlistCoin = WatchlistCoin(
+      id: _coin.id,
+      name: _coin.name,
+      symbol: _coin.symbol,
+      image: _coin.image,
+    );
+    setState(() {
+      _isFavorite = shouldBeWatchlisted;
+      _watchlistPending = true;
+    });
     HapticFeedback.selectionClick();
-    _snack(_isFavorite
-        ? '${_coin.name} added to Watchlist'
-        : '${_coin.name} removed from Watchlist');
+
+    try {
+      final update = shouldBeWatchlisted
+          ? WatchlistRepository.instance.addCoin(user.uid, watchlistCoin)
+          : WatchlistRepository.instance.removeCoin(user.uid, _coin.id);
+      await update.timeout(const Duration(seconds: 2));
+      _snack(shouldBeWatchlisted
+          ? '${_coin.name} added to Watchlist'
+          : '${_coin.name} removed from Watchlist');
+    } on TimeoutException {
+      // The write may still complete after Firestore reconnects.
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isFavorite = !shouldBeWatchlisted);
+        _snack('Could not update your watchlist. Check your connection and retry. ($error)');
+      }
+    } finally {
+      if (mounted) setState(() => _watchlistPending = false);
+    }
   }
 
   // ── Trade Actions ──────────────────────────────────────────────────────────
@@ -369,11 +441,18 @@ class _SelectCoinState extends State<SelectCoin> {
         ),
         actions: [
           IconButton(
+            tooltip: _watchlistError != null
+                ? 'Watchlist unavailable'
+                : _isFavorite
+                    ? 'Remove from watchlist'
+                    : 'Add to watchlist',
             icon: Icon(
               _isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
               color: _isFavorite ? const Color(0xFFFFB300) : cs.onSurface,
             ),
-            onPressed: _toggleFavorite,
+            onPressed: _watchlistLoading || _watchlistPending
+                ? null
+                : _toggleFavorite,
           ),
         ],
       ),
@@ -1331,9 +1410,13 @@ class _NewsSection extends StatelessWidget {
                       Icon(Icons.info_outline_rounded,
                           size: 18, color: cs.onSurfaceVariant),
                       const SizedBox(width: 8),
-                      Text('No related market news available right now.',
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: cs.onSurfaceVariant)),
+                      Text(
+                        snap.error is NewsException
+                            ? (snap.error as NewsException).message
+                            : 'No related market news available right now.',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 );

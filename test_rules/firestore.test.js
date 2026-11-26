@@ -334,4 +334,108 @@ describe("Firestore Security Rules", () => {
     await assertFails(bobTxRef.delete());
     await assertSucceeds(txRef.delete());
   });
+
+  test("owner can create, read, re-add, and delete a valid watchlist coin", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const coinRef = db.collection("users").doc(aliceId).collection("watchlist").doc("bitcoin");
+    const coin = {
+      name: "Bitcoin",
+      symbol: "btc",
+      image: "https://example.com/bitcoin.png",
+    };
+
+    await assertSucceeds(coinRef.set(coin));
+    await assertSucceeds(coinRef.get());
+    await assertSucceeds(coinRef.set(coin));
+    await assertSucceeds(coinRef.delete());
+  });
+
+  test("another user and unauthenticated users cannot access a watchlist", async () => {
+    const ownerDb = testEnv.authenticatedContext(aliceId).firestore();
+    const otherDb = testEnv.authenticatedContext(bobId).firestore();
+    const unauthenticatedDb = testEnv.unauthenticatedContext().firestore();
+    const coin = {
+      name: "Bitcoin",
+      symbol: "btc",
+      image: "https://example.com/bitcoin.png",
+    };
+    const ownerCoin = ownerDb.collection("users").doc(aliceId).collection("watchlist").doc("bitcoin");
+    const otherCoin = otherDb.collection("users").doc(aliceId).collection("watchlist").doc("bitcoin");
+    const otherCreateCoin = otherDb.collection("users").doc(aliceId).collection("watchlist").doc("other-create");
+    const unauthenticatedCoin = unauthenticatedDb.collection("users").doc(aliceId).collection("watchlist").doc("bitcoin");
+    const unauthenticatedCreateCoin = unauthenticatedDb.collection("users").doc(aliceId).collection("watchlist").doc("unauthenticated-create");
+
+    await assertSucceeds(ownerCoin.set(coin));
+    await assertFails(otherCoin.get());
+    await assertFails(otherCreateCoin.set(coin));
+    await assertFails(otherCoin.update({ name: "Other" }));
+    await assertFails(otherCoin.delete());
+    await assertFails(unauthenticatedCoin.get());
+    await assertFails(unauthenticatedCreateCoin.set(coin));
+    await assertFails(unauthenticatedCoin.update({ name: "Other" }));
+    await assertFails(unauthenticatedCoin.delete());
+  });
+
+  test("watchlist rejects invalid coin IDs", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const watchlist = db.collection("users").doc(aliceId).collection("watchlist");
+
+    await assertFails(
+      watchlist.doc("BAD ID!").set({
+        name: "Bitcoin",
+        symbol: "btc",
+        image: "https://example.com/bitcoin.png",
+      })
+    );
+  });
+
+  test("watchlist rejects invalid fields and oversized values on create and update", async () => {
+    const db = testEnv.authenticatedContext(aliceId).firestore();
+    const watchlist = db.collection("users").doc(aliceId).collection("watchlist");
+    const coin = {
+      name: "Bitcoin",
+      symbol: "btc",
+      image: "https://example.com/bitcoin.png",
+    };
+
+    await assertFails(
+      watchlist.doc("invalid-name").set({
+        name: 123,
+        symbol: "btc",
+        image: "",
+      })
+    );
+    await assertFails(
+      watchlist.doc("extra-field-create").set({
+        ...coin,
+        wallet: 10000,
+      })
+    );
+    await assertFails(
+      watchlist.doc("missing-field-create").set({
+        name: "Bitcoin",
+        symbol: "btc",
+      })
+    );
+    await assertFails(
+      watchlist.doc("long-name").set({
+        name: "a".repeat(101),
+        symbol: "btc",
+        image: "",
+      })
+    );
+
+    const extraFieldUpdate = watchlist.doc("extra-field-update");
+    await assertSucceeds(extraFieldUpdate.set(coin));
+    await assertFails(extraFieldUpdate.set({ ...coin, wallet: 10000 }));
+
+    const missingFieldUpdate = watchlist.doc("missing-field-update");
+    await assertSucceeds(missingFieldUpdate.set(coin));
+    await assertFails(
+      missingFieldUpdate.set({
+        name: "Bitcoin",
+        symbol: "btc",
+      })
+    );
+  });
 });

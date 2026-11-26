@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../Model/chartModel.dart';
 import '../Model/coinModel.dart';
+import '../Model/coin_search_result.dart';
 
 sealed class MarketException implements Exception {
   String get message;
@@ -59,6 +60,11 @@ class MarketRepository {
 
   final Map<String, ({DateTime at, List<ChartModel> data})> _ohlcCache = {};
   final Map<String, Future<List<ChartModel>>> _inFlightOhlc = {};
+  final Map<String, ({DateTime at, List<CoinSearchResult> results})>
+      _searchCache = {};
+  final Map<String, Future<List<CoinSearchResult>>> _inFlightSearches = {};
+
+  static const Duration _searchCacheDuration = Duration(minutes: 5);
 
   DateTime? get lastUpdated => _lastUpdated;
 
@@ -112,6 +118,99 @@ class MarketRepository {
       return result;
     } finally {
       _inFlightFuture = null;
+    }
+  }
+
+  Future<List<CoinSearchResult>> searchCoins(
+    String query, {
+    Future<void>? abortTrigger,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) return const [];
+
+    final cacheKey = normalizedQuery.toLowerCase();
+    final cached = _searchCache[cacheKey];
+    if (cached != null) {
+      if (DateTime.now().difference(cached.at) < _searchCacheDuration) {
+        return cached.results;
+      }
+      _searchCache.remove(cacheKey);
+    }
+
+    final inFlight = _inFlightSearches[cacheKey];
+    if (inFlight != null) return inFlight;
+
+    final future = _fetchCoinSearch(normalizedQuery, cacheKey, abortTrigger);
+    _inFlightSearches[cacheKey] = future;
+    abortTrigger?.then((_) {
+      if (identical(_inFlightSearches[cacheKey], future)) {
+        _inFlightSearches.remove(cacheKey);
+      }
+    });
+    return future.whenComplete(() {
+      if (identical(_inFlightSearches[cacheKey], future)) {
+        _inFlightSearches.remove(cacheKey);
+      }
+    });
+  }
+
+  Future<List<CoinSearchResult>> _fetchCoinSearch(
+    String query,
+    String cacheKey,
+    Future<void>? abortTrigger,
+  ) async {
+    final uri = Uri.https('api.coingecko.com', '/api/v3/search', {
+      'query': query,
+    });
+    final request = http.AbortableRequest(
+      'GET',
+      uri,
+      abortTrigger: abortTrigger ?? Completer<void>().future,
+    )..headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      });
+
+    try {
+      final response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 429) throw RateLimited();
+      if (response.statusCode != 200) {
+        throw ServerError(response.statusCode);
+      }
+
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map || decoded['coins'] is! List) {
+          throw const FormatException('Invalid CoinGecko search response.');
+        }
+        final results = (decoded['coins'] as List)
+            .map((coin) => CoinSearchResult.fromJson(
+                  Map<String, dynamic>.from(coin as Map),
+                ))
+            .toList(growable: false);
+        final cachedResults = List<CoinSearchResult>.unmodifiable(results);
+        _searchCache[cacheKey] = (
+          at: DateTime.now(),
+          results: cachedResults,
+        );
+        return cachedResults;
+      } catch (error) {
+        if (error is MarketException) rethrow;
+        throw BadData();
+      }
+    } catch (error) {
+      if (error is MarketException) rethrow;
+      debugPrint('_fetchCoinSearch error: $error');
+      if (error is IOException ||
+          error is http.ClientException ||
+          error is TimeoutException) {
+        throw Offline();
+      }
+      throw Unexpected();
     }
   }
 
