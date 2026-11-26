@@ -151,11 +151,12 @@ class MyApp extends StatelessWidget {
    - Download the `google-services.json` file from your Firebase project.
    - Place it in the `android/app` directory of your Flutter project.
 
-5. Set the NewsData API key at runtime and run the app:
-   ```bash
-   flutter run --dart-define=NEWS_API_KEY=your_key
-   ```
-   In Android Studio, add `--dart-define=NEWS_API_KEY=your_key` under **Run > Edit Configurations > Additional run args**. Never commit the key.
+5. Configure the NewsData API key and run the app:
+   - Copy `env.example.json` to `env.json` and add your NewsData API key to `NEWS_API_KEY`.
+   - Run the app with `flutter run --dart-define-from-file=env.json`.
+   - In Android Studio, set Run > Edit Configurations > Additional run args to `--dart-define-from-file=env.json`.
+   - Build with `flutter build apk --dart-define-from-file=env.json`.
+   Never commit `env.json`.
 
 ## Technologies Used
 

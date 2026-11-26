@@ -49,7 +49,7 @@ void main() {
       );
 
       await expectLater(
-        NewsService(client: client, apiKey: 'test-key').fetchNews('bitcoin'),
+        NewsService(client: client, apiKey: 'test-key').fetchNews('bitcoin-error'),
         throwsA(
           isA<NewsException>().having(
             (error) => error.message,
@@ -73,11 +73,44 @@ void main() {
           isA<NewsException>().having(
             (error) => error.message,
             'message',
-            'News is not configured.',
+            'News API key is missing. Add NEWS_API_KEY to env.json, then run '
+            'flutter run --dart-define-from-file=env.json.',
           ),
         ),
       );
       expect(requestSent, isFalse);
+    });
+
+    test('caches successful results across service instances', () async {
+      var requestCount = 0;
+      final firstClient = MockClient((_) async {
+        requestCount++;
+        return http.Response(
+          jsonEncode({
+            'results': [
+              {'title': 'Cached article'},
+            ],
+          }),
+          200,
+        );
+      });
+      final secondClient = MockClient((_) async {
+        requestCount++;
+        return http.Response('{"results": []}', 200);
+      });
+
+      final firstResponse = await NewsService(
+        client: firstClient,
+        apiKey: 'cache-test-key',
+      ).fetchNews('cache-test-query');
+      final secondResponse = await NewsService(
+        client: secondClient,
+        apiKey: 'cache-test-key',
+      ).fetchNews('cache-test-query');
+
+      expect(requestCount, 1);
+      expect(firstResponse.articles.single.title, 'Cached article');
+      expect(secondResponse.articles.single.title, 'Cached article');
     });
   });
 }
