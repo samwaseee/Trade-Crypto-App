@@ -18,6 +18,9 @@ String formatUsd(num value) {
   }
 }
 
+String formatQuantity(num value) =>
+    NumberFormat('#,##0.########', 'en_US').format(value);
+
 String formatSignedUsd(num value) {
   if (value.abs() < 0.005) {
     return '\$${formatUsd(0)}';

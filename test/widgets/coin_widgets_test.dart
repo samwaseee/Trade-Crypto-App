@@ -5,8 +5,15 @@ import 'package:my_crypto/View/Components/coin_tile.dart';
 import 'package:my_crypto/View/Components/item2.dart';
 import 'package:my_crypto/View/Components/state_widgets.dart';
 import 'package:my_crypto/theme/app_theme.dart';
+import 'package:my_crypto/utils/format.dart';
 
 void main() {
+  test('formats tiny crypto quantities without rounding to zero', () {
+    expect(formatQuantity(1e-8), '0.00000001');
+    expect(formatQuantity(0.000001), '0.000001');
+    expect(formatQuantity(1.25), '1.25');
+  });
+
   testWidgets('Top 10 loading layout builds without exceptions',
       (tester) async {
     await tester.pumpWidget(

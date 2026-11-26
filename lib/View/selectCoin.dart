@@ -262,7 +262,13 @@ class _SelectCoinState extends State<SelectCoin> {
       return;
     }
 
-    final reqCost = parsed * _livePrice;
+    final tradePrice = _livePrice;
+    if (!tradePrice.isFinite || tradePrice <= 0) {
+      _snack('Could not get a current price. Refresh and try again.');
+      return;
+    }
+
+    final reqCost = parsed * tradePrice;
     if (reqCost > availableWallet) {
       _snack(
           'Insufficient funds. Cost is \$${formatUsd(reqCost)}, wallet has \$${formatUsd(availableWallet)}');
@@ -274,18 +280,16 @@ class _SelectCoinState extends State<SelectCoin> {
     HapticFeedback.mediumImpact();
 
     try {
-      final freshPrice =
-          await MarketRepository.instance.getFreshPrice(_coin.id);
       await TradeService().openTrade(
         userId: user.uid,
         coinId: _coin.id,
         type: type,
         amount: _amount,
-        price: freshPrice,
+        price: tradePrice,
       );
       final label = type == 'Buy' ? 'Long' : 'Short';
       _snack(
-          '$label opened: $_amount ${_coin.symbol.toUpperCase()} @ \$${formatUsd(freshPrice)}');
+          '$label opened: $_amount ${_coin.symbol.toUpperCase()} @ \$${formatUsd(tradePrice)}');
     } catch (e) {
       final msg = e
           .toString()

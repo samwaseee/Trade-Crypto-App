@@ -122,7 +122,7 @@ class Item extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${transaction['amount'].toStringAsFixed(2)} @ \$${formatUsd(transaction['price'])}',
+                      '${formatQuantity(amount)} @ \$${formatUsd(entryPrice)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall

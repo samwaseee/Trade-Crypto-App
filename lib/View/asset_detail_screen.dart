@@ -164,7 +164,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Close Position'),
         content: Text(
-          'Close your ${tradeLabel(_type)} of $_amount ${widget.coin.symbol.toUpperCase()} at '
+          'Close your ${tradeLabel(_type)} of ${formatQuantity(_amount)} ${widget.coin.symbol.toUpperCase()} at '
           '\$${formatUsd(_livePrice)}?\n\n'
           'Est. PnL: ${formatSignedUsd(_pnl)}',
         ),
@@ -582,7 +582,7 @@ class _PositionStatsCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: _stat('Size', amount.toStringAsFixed(4))),
+                Expanded(child: _stat('Size', formatQuantity(amount))),
                 Expanded(child: _stat('Collateral', '\$${formatUsd(cost)}')),
               ],
             ),
