@@ -17,6 +17,7 @@ void main() {
               12,
               (index) => {
                 'title': 'Article $index',
+                'description': 'Description $index',
                 'link': 'https://example.com/$index',
                 'image_url': 'https://example.com/$index.png',
               },
@@ -41,6 +42,7 @@ void main() {
       });
       expect(response.articles, hasLength(10));
       expect(response.articles.first.title, 'Article 0');
+      expect(response.articles.first.description, 'Description 0');
     });
 
     test('throws a friendly exception for non-200 responses', () async {

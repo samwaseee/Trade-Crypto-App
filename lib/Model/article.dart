@@ -2,11 +2,13 @@ class Article {
   final String? title;
   final String? link;
   final String? imageUrl;
+  final String? description;
 
   Article({
     required this.title,
     required this.link,
     required this.imageUrl,
+    this.description,
   });
 
   factory Article.fromJson(Map<String, dynamic> json) {
@@ -14,6 +16,7 @@ class Article {
       title: json['title'] as String?,
       link: json['link'] as String?,
       imageUrl: json['image_url'] as String?,
+      description: json['description'] as String?,
     );
   }
 }

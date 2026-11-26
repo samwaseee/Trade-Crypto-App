@@ -26,6 +26,25 @@ service cloud.firestore {
       return coinId.matches('^[a-z0-9._-]{1,100}$');
     }
 
+    function isValidAssistantMessage() {
+      return request.resource.data.keys().hasAll(['role', 'text', 'createdAt']) &&
+        request.resource.data.keys().hasOnly(['role', 'text', 'createdAt']) &&
+        request.resource.data.role is string &&
+        request.resource.data.role in ['user', 'assistant'] &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 10000 &&
+        request.resource.data.createdAt is timestamp;
+    }
+
+    function isValidAssistantUsage() {
+      return request.resource.data.keys().hasAll(['count']) &&
+        request.resource.data.keys().hasOnly(['count']) &&
+        request.resource.data.count is int &&
+        request.resource.data.count >= 0 &&
+        request.resource.data.count <= 100;
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId);
 
@@ -56,6 +75,26 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create, update: if isOwner(userId) && isValidCoinId(coinId) && isValidWatchlistCoin();
         allow delete: if isOwner(userId);
+      }
+
+      match /assistantMessages/{messageId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAssistantMessage() &&
+          request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(userId);
+      }
+
+      match /assistantUsage/{day} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAssistantUsage() &&
+          request.resource.data.count == 1;
+        allow update: if isOwner(userId) && isValidAssistantUsage() &&
+          resource.data.count is int &&
+          resource.data.count >= 0 &&
+          resource.data.count < 100 &&
+          request.resource.data.count == resource.data.count + 1;
+        allow delete: if false;
       }
 
       match /transactions/{transactionId} {

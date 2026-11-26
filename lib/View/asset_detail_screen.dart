@@ -10,6 +10,7 @@ import '../Model/chartModel.dart';
 import '../Model/coinModel.dart';
 import '../Services/market_repository.dart';
 import '../Services/trade_service.dart';
+import 'assistant_screen.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
@@ -153,6 +154,20 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     return '${d.inMinutes}m';
   }
 
+  void _askAiAboutPosition() {
+    final side = _isLong ? 'long' : 'short';
+    final prompt = 'Analyze my ${widget.coin.name} $side position: '
+        'entry price is \$${formatUsd(_entryPrice)}, '
+        'current price is \$${formatUsd(_livePrice)}, '
+        'P/L is ${formatSignedUsd(_pnl)} (${_pnlPct.toStringAsFixed(2)}%). '
+        'Explain the main risks.';
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AssistantScreen(initialPrompt: prompt),
+      ),
+    );
+  }
+
   // ── close trade ────────────────────────────────────────────────────────────
 
   Future<void> _closeTrade() async {
@@ -290,6 +305,12 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                       theme: theme,
                       tc: tc,
                       isLong: _isLong,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _askAiAboutPosition,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Ask AI about this position'),
                     ),
                     const SizedBox(height: 12),
 

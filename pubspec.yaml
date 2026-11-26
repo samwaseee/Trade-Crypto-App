@@ -41,10 +41,15 @@ dependencies:
   firebase_core: ^5.2.0
   firebase_auth: ^7.1.0
   cloud_firestore: ^7.2.0
+  firebase_ai: ^5.1.0
+  firebase_app_check: any # AI Logic requires App Check; run `flutter pub upgrade` then tighten this
   url_launcher: ^6.0.13
   intl: ^0.20.3
 
   material_ui: ^1.11.1
+  flutter_markdown_plus: ^1.0.12
+  image_picker: ^1.2.4
+  path_provider: ^2.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -58,6 +63,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   fake_cloud_firestore: ^4.5.0
   flutter_native_splash: ^2.4.8
+
+dependency_overrides:
+  # 2.3.x uses JNI FFI, which fails to load on the current Android runtime.
+  path_provider_android: 2.2.19
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
