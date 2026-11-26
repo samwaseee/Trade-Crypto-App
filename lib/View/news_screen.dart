@@ -1,12 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:my_crypto/View/Components/state_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../Model/article.dart';
-import '../Services/assistant_service.dart';
 import '../Services/news_service.dart';
 
 class NewsScreen extends StatefulWidget {
@@ -18,8 +15,6 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen> {
   late Future<NewsResponse> futureNews;
-  final AssistantService _assistantService = AssistantService();
-  bool _summarizing = false;
 
   @override
   void initState() {
@@ -34,23 +29,6 @@ class _NewsScreenState extends State<NewsScreen> {
     await futureNews;
   }
 
-  Future<void> _showSummary(List<Article> articles) async {
-    setState(() => _summarizing = true);
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) => _NewsSummarySheet(
-          articles: articles,
-          assistantService: _assistantService,
-          userId: FirebaseAuth.instance.currentUser?.uid,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _summarizing = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -58,30 +36,6 @@ class _NewsScreenState extends State<NewsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Latest News'),
-        actions: [
-          FutureBuilder<NewsResponse>(
-            future: futureNews,
-            builder: (context, snapshot) {
-              final articles = snapshot.data?.articles;
-              if (articles == null || articles.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return TextButton.icon(
-                onPressed: _summarizing
-                    ? null
-                    : () => _showSummary(articles),
-                icon: _summarizing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.summarize_outlined),
-                label: Text(_summarizing ? 'Summarizing' : 'Summarize'),
-              );
-            },
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refreshNews,
@@ -216,98 +170,5 @@ class _NewsScreenState extends State<NewsScreen> {
         throw 'Could not launch $url';
       }
     }
-  }
-}
-
-class _NewsSummarySheet extends StatefulWidget {
-  const _NewsSummarySheet({
-    required this.articles,
-    required this.assistantService,
-    required this.userId,
-  });
-
-  final List<Article> articles;
-  final AssistantService assistantService;
-  final String? userId;
-
-  @override
-  State<_NewsSummarySheet> createState() => _NewsSummarySheetState();
-}
-
-class _NewsSummarySheetState extends State<_NewsSummarySheet> {
-  late Future<String> _summary;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSummary();
-  }
-
-  void _loadSummary() {
-    _summary = widget.assistantService.summarizeNews(
-      widget.articles,
-      userId: widget.userId,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.75,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text('News summary', style: theme.textTheme.titleLarge),
-                  ),
-                  IconButton(
-                    tooltip: 'Close summary',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              Expanded(
-                child: FutureBuilder<String>(
-                  future: _summary,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return ErrorState(
-                        error: snapshot.error,
-                        message: snapshot.error is AssistantException
-                            ? (snapshot.error! as AssistantException).message
-                            : null,
-                        onRetry: () => setState(_loadSummary),
-                      );
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.only(top: 12, bottom: 24),
-                      child: MarkdownBody(
-                        data: snapshot.data!,
-                        styleSheet: MarkdownStyleSheet(
-                          p: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
