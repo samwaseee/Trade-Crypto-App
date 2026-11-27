@@ -47,6 +47,8 @@ app.*.map.json
 env.json
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+android/key.properties
+*.jks
 android/build/
 node_modules/
 firestore-debug.log
