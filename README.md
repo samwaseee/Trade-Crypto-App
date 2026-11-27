@@ -153,10 +153,12 @@ class MyApp extends StatelessWidget {
 
 5. Configure the NewsData API key and run the app:
    - Copy `env.example.json` to `env.json` and add your NewsData API key to `NEWS_API_KEY`.
-   - Run the app with `flutter run --dart-define-from-file=env.json`.
-   - In Android Studio, set Run > Edit Configurations > Additional run args to `--dart-define-from-file=env.json`.
+   - `APP_CHECK_DEBUG_TOKEN` is optional and used only in debug builds.
+   - Set it to a UUID registered with `npx firebase appcheck:debugtokens:create <uuid> --project <project> --app <app-id>`.
+   - Run with `flutter run --dart-define-from-file=env.json`; the same argument can be set in Android Studio Run Configurations.
    - Build with `flutter build apk --dart-define-from-file=env.json`.
-   Never commit `env.json`.
+   - Never commit env.json.
+   - Never commit the real debug token.
 
 ## Technologies Used
 

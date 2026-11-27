@@ -6,6 +6,9 @@ import 'package:my_crypto/View/app_route_observer.dart';
 import 'package:my_crypto/theme/app_theme.dart';
 import 'package:material_ui/material_ui.dart';
 
+const String _appCheckDebugToken =
+    String.fromEnvironment('APP_CHECK_DEBUG_TOKEN');
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -13,10 +16,19 @@ void main() async {
   // Debug providers are used in debug builds; register the debug token printed
   // in the logs under Firebase console > App Check > Apps > Manage debug tokens.
   await FirebaseAppCheck.instance.activate(
-    providerAndroid:
-        kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+    providerAndroid: kDebugMode
+        ? AndroidDebugProvider(
+            debugToken: _appCheckDebugToken.isNotEmpty
+                ? _appCheckDebugToken
+                : null,
+          )
+        : AndroidPlayIntegrityProvider(),
     providerApple: kDebugMode
-        ? AppleDebugProvider()
+        ? AppleDebugProvider(
+            debugToken: _appCheckDebugToken.isNotEmpty
+                ? _appCheckDebugToken
+                : null,
+          )
         : AppleAppAttestWithDeviceCheckFallbackProvider(),
   );
   runApp(const MyApp());

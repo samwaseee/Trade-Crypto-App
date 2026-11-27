@@ -15,6 +15,7 @@ import '../Services/market_repository.dart';
 import '../Services/news_service.dart';
 import '../Services/trade_service.dart';
 import '../Services/watchlist_repository.dart';
+import 'Components/outlook_card.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/pnl.dart';
@@ -541,6 +542,13 @@ class _SelectCoinState extends State<SelectCoin> {
                               setState(() => _useLineChart = !_useLineChart);
                             },
                             onRetry: _loadChart,
+                          ),
+
+                          OutlookCard(
+                            chartData: _chart,
+                            isLoading: _chartLoading,
+                            hasError: _chartError,
+                            timeframe: _timeLabels[_timeIdx],
                           ),
 
                           // ── Market Stats Grid ────────────────────────────
